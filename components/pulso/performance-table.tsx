@@ -67,6 +67,32 @@ export function PerformanceTable({ data }: PerformanceTableProps) {
     { key: "percentual", label: "%" },
   ]
 
+  function exportCSV() {
+    const today = new Date().toISOString().split("T")[0]
+    const header = "Matricula;Funcionario;Setor;Concluidas;Pendentes;Ressalvas;Percentual\n"
+    const rows = sortedData
+      .map(
+        (e) =>
+          `${e.matricula};${e.nome};${e.setor};${e.concluidas};${e.pendentes};${e.ressalvas};${e.percentual}%`
+      )
+      .join("\n")
+
+    const bom = "\uFEFF"
+    const blob = new Blob([bom + header + rows], {
+      type: "text/csv;charset=utf-8;",
+    })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `pulso-performance-${today}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  function handlePrint() {
+    window.print()
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between">
@@ -76,13 +102,15 @@ export function PerformanceTable({ data }: PerformanceTableProps) {
         <div className="flex items-center gap-2">
           <button
             type="button"
+            onClick={exportCSV}
             className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
           >
             <Download className="h-3.5 w-3.5" />
-            Exportar
+            Exportar CSV
           </button>
           <button
             type="button"
+            onClick={handlePrint}
             className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
           >
             <Printer className="h-3.5 w-3.5" />

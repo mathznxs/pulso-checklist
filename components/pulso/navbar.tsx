@@ -9,6 +9,7 @@ import {
   Trophy,
   Settings,
   LogOut,
+  CalendarClock,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Profile, Cargo } from "@/lib/types"
@@ -20,6 +21,7 @@ const navItems = [
   { label: "Execucao", href: "/execucao", icon: ClipboardCheck, minCargo: "assistente" as Cargo },
   { label: "Calendario", href: "/calendario", icon: Calendar, minCargo: "assistente" as Cargo },
   { label: "Gincanas", href: "/gincanas", icon: Trophy, minCargo: "assistente" as Cargo },
+  { label: "Escala", href: "/escala", icon: CalendarClock, minCargo: "assistente" as Cargo },
   { label: "Admin", href: "/admin", icon: Settings, minCargo: "lideranca" as Cargo },
 ]
 

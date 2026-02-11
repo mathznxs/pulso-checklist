@@ -108,6 +108,17 @@ export interface Announcement {
   criado_em: string
 }
 
+export interface TemporarySchedule {
+  id: string
+  user_id: string
+  setor: string
+  data: string
+  turno_id: string
+  criado_por: string
+  profile?: Profile
+  shift?: Shift
+}
+
 export interface DashboardStats {
   concluidas: number
   pendentes: number

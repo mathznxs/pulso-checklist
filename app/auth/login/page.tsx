@@ -1,7 +1,6 @@
 "use client"
 
 import React from "react"
-
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
@@ -11,25 +10,55 @@ import { Label } from "@/components/ui/label"
 import { AlertCircle, Loader2 } from "lucide-react"
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
+  const [matricula, setMatricula] = useState("")
+  const [cpf, setCpf] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+
+  function formatCpf(value: string) {
+    const digits = value.replace(/\D/g, "").slice(0, 11)
+    if (digits.length <= 3) return digits
+    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`
+    if (digits.length <= 9)
+      return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`
+  }
+
+  function handleCpfChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setCpf(formatCpf(e.target.value))
+  }
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     setLoading(true)
 
+    const cleanMatricula = matricula.trim()
+    const cleanCpf = cpf.replace(/\D/g, "")
+
+    if (!cleanMatricula) {
+      setError("Informe sua matricula.")
+      setLoading(false)
+      return
+    }
+
+    if (cleanCpf.length !== 11) {
+      setError("CPF invalido. Informe os 11 digitos.")
+      setLoading(false)
+      return
+    }
+
+    const email = `${cleanMatricula}@pulso.centauro.local`
+
     const supabase = createClient()
     const { error: authError } = await supabase.auth.signInWithPassword({
       email,
-      password,
+      password: cleanCpf,
     })
 
     if (authError) {
-      setError("Credenciais invalidas. Verifique seu email e senha.")
+      setError("Credenciais invalidas. Verifique sua matricula e CPF.")
       setLoading(false)
       return
     }
@@ -66,28 +95,31 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="matricula">Matricula</Label>
             <Input
-              id="email"
-              type="email"
-              placeholder="seu.email@centauro.com.br"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              id="matricula"
+              type="text"
+              inputMode="numeric"
+              placeholder="Ex: 10234"
+              value={matricula}
+              onChange={(e) => setMatricula(e.target.value.replace(/\D/g, ""))}
               required
-              autoComplete="email"
+              autoComplete="username"
             />
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="password">Senha</Label>
+            <Label htmlFor="cpf">CPF (senha)</Label>
             <Input
-              id="password"
-              type="password"
-              placeholder="Sua senha"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              id="cpf"
+              type="text"
+              inputMode="numeric"
+              placeholder="000.000.000-00"
+              value={cpf}
+              onChange={handleCpfChange}
               required
               autoComplete="current-password"
+              maxLength={14}
             />
           </div>
 
@@ -111,7 +143,7 @@ export default function LoginPage() {
         </form>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
-          Centauro Pulso v1.0 - Acesso restrito a colaboradores
+          Centauro Pulso v3.0 - Acesso restrito a colaboradores
         </p>
       </div>
     </div>
