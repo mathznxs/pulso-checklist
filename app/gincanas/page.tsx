@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { Navbar } from "@/components/pulso/navbar"
 import { getCurrentUser } from "@/lib/actions/auth"
 import { getActiveChallenges, getChallengeScores } from "@/lib/actions/challenges"

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { Navbar } from "@/components/pulso/navbar"
 import { AnnouncementBanner } from "@/components/pulso/announcement-banner"
 import { OperationalDay } from "@/components/pulso/operational-day"
