@@ -3,10 +3,13 @@ import { getCurrentUser } from "@/lib/actions/auth"
 import { getTodayTasks } from "@/lib/actions/tasks"
 import { getAllProfiles } from "@/lib/actions/admin"
 import { ExecucaoContent } from "@/components/pulso/execucao-content"
+import { redirect } from "next/navigation"
 
 export default async function ExecucaoPage() {
-  const [{ profile }, tasks, profiles] = await Promise.all([
-    getCurrentUser(),
+  const { profile } = await getCurrentUser()
+  if (!profile) redirect("/auth/login")
+
+  const [tasks, profiles] = await Promise.all([
     getTodayTasks(),
     getAllProfiles(),
   ])

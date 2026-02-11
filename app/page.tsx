@@ -5,6 +5,7 @@ import { SectorExecution } from "@/components/pulso/sector-execution"
 import { PerformanceTable } from "@/components/pulso/performance-table"
 import { PerformanceChart } from "@/components/pulso/performance-chart"
 import { getCurrentUser } from "@/lib/actions/auth"
+import { redirect } from "next/navigation"
 import {
   getDashboardStats,
   getSectorStats,
@@ -44,8 +45,10 @@ function formatDate(): string {
 }
 
 export default async function DashboardPage() {
+  const { profile } = await getCurrentUser()
+  if (!profile) redirect("/auth/login")
+
   const [
-    { profile },
     stats,
     sectors,
     operationalStatus,
@@ -54,7 +57,6 @@ export default async function DashboardPage() {
     weeklyData,
     employeeData,
   ] = await Promise.all([
-    getCurrentUser(),
     getDashboardStats(),
     getSectorStats(),
     getOperationalStatus(),

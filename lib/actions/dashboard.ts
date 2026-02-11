@@ -110,38 +110,43 @@ export async function getWeeklyPerformance(): Promise<
   { day: string; percentage: number }[]
 > {
   const supabase = await createClient()
-  const days: { day: string; percentage: number }[] = []
+  const dayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"]
 
   const now = new Date()
   const startOfWeek = new Date(now)
   startOfWeek.setDate(now.getDate() - now.getDay())
+  const endOfWeek = new Date(startOfWeek)
+  endOfWeek.setDate(startOfWeek.getDate() + 6)
 
-  for (let i = 0; i < 7; i++) {
-    const day = new Date(startOfWeek)
-    day.setDate(startOfWeek.getDate() + i)
-    const dayStr = day.toISOString().split("T")[0]
-    const dayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"]
+  const startStr = startOfWeek.toISOString().split("T")[0]
+  const endStr = endOfWeek.toISOString().split("T")[0]
 
-    const { data: tasks } = await supabase
-      .from("tasks")
-      .select("status")
-      .gte("prazo", `${dayStr}T00:00:00`)
-      .lte("prazo", `${dayStr}T23:59:59`)
+  const { data: tasks } = await supabase
+    .from("tasks")
+    .select("status, prazo")
+    .gte("prazo", `${startStr}T00:00:00`)
+    .lte("prazo", `${endStr}T23:59:59`)
 
-    let total = 0
-    let concluidas = 0
-    if (tasks) {
-      total = tasks.length
-      concluidas = tasks.filter((t) => t.status === "concluida").length
+  const dayMap = new Map<number, { total: number; concluidas: number }>()
+
+  if (tasks) {
+    for (const t of tasks) {
+      const taskDate = new Date(t.prazo)
+      const dayIdx = taskDate.getDay()
+      if (!dayMap.has(dayIdx)) dayMap.set(dayIdx, { total: 0, concluidas: 0 })
+      const d = dayMap.get(dayIdx)!
+      d.total++
+      if (t.status === "concluida") d.concluidas++
     }
-
-    days.push({
-      day: dayNames[i],
-      percentage: total > 0 ? Math.round((concluidas / total) * 100) : 0,
-    })
   }
 
-  return days
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = dayMap.get(i)
+    return {
+      day: dayNames[i],
+      percentage: d && d.total > 0 ? Math.round((d.concluidas / d.total) * 100) : 0,
+    }
+  })
 }
 
 export async function getEmployeePerformance(): Promise<

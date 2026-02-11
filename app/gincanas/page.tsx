@@ -3,10 +3,13 @@ import { getCurrentUser } from "@/lib/actions/auth"
 import { getActiveChallenges, getChallengeScores } from "@/lib/actions/challenges"
 import { getAllProfiles } from "@/lib/actions/admin"
 import { GincanasContent } from "@/components/pulso/gincanas-content"
+import { redirect } from "next/navigation"
 
 export default async function GincanasPage() {
-  const [{ profile }, challenges, profiles] = await Promise.all([
-    getCurrentUser(),
+  const { profile } = await getCurrentUser()
+  if (!profile) redirect("/auth/login")
+
+  const [challenges, profiles] = await Promise.all([
     getActiveChallenges(),
     getAllProfiles(),
   ])

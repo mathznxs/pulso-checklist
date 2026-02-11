@@ -2,13 +2,14 @@ import { Navbar } from "@/components/pulso/navbar"
 import { getCurrentUser } from "@/lib/actions/auth"
 import { getCalendarEvents } from "@/lib/actions/calendar"
 import { CalendarioContent } from "@/components/pulso/calendario-content"
+import { redirect } from "next/navigation"
 
 export default async function CalendarioPage() {
+  const { profile } = await getCurrentUser()
+  if (!profile) redirect("/auth/login")
+
   const now = new Date()
-  const [{ profile }, events] = await Promise.all([
-    getCurrentUser(),
-    getCalendarEvents(now.getMonth() + 1, now.getFullYear()),
-  ])
+  const events = await getCalendarEvents(now.getMonth() + 1, now.getFullYear())
 
   const isLideranca =
     profile?.cargo === "lideranca" ||

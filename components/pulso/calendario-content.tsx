@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import type { CalendarEvent, Profile } from "@/lib/types"
-import { createCalendarEvent, deleteCalendarEvent } from "@/lib/actions/calendar"
+import { createCalendarEvent, deleteCalendarEvent, getCalendarEvents } from "@/lib/actions/calendar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -39,10 +39,11 @@ interface CalendarioContentProps {
   currentProfile: Profile | null
 }
 
-export function CalendarioContent({ events, isLideranca }: CalendarioContentProps) {
+export function CalendarioContent({ events: initialEvents, isLideranca }: CalendarioContentProps) {
   const now = new Date()
   const [currentMonth, setCurrentMonth] = useState(now.getMonth())
   const [currentYear, setCurrentYear] = useState(now.getFullYear())
+  const [events, setEvents] = useState<CalendarEvent[]>(initialEvents)
   const [showCreate, setShowCreate] = useState(false)
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
@@ -50,22 +51,25 @@ export function CalendarioContent({ events, isLideranca }: CalendarioContentProp
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
   const firstDay = new Date(currentYear, currentMonth, 1).getDay()
 
+  const fetchEvents = useCallback(async (month: number, year: number) => {
+    const data = await getCalendarEvents(month + 1, year)
+    setEvents(data)
+  }, [])
+
   const prevMonth = () => {
-    if (currentMonth === 0) {
-      setCurrentMonth(11)
-      setCurrentYear((y) => y - 1)
-    } else {
-      setCurrentMonth((m) => m - 1)
-    }
+    const newMonth = currentMonth === 0 ? 11 : currentMonth - 1
+    const newYear = currentMonth === 0 ? currentYear - 1 : currentYear
+    setCurrentMonth(newMonth)
+    setCurrentYear(newYear)
+    fetchEvents(newMonth, newYear)
   }
 
   const nextMonth = () => {
-    if (currentMonth === 11) {
-      setCurrentMonth(0)
-      setCurrentYear((y) => y + 1)
-    } else {
-      setCurrentMonth((m) => m + 1)
-    }
+    const newMonth = currentMonth === 11 ? 0 : currentMonth + 1
+    const newYear = currentMonth === 11 ? currentYear + 1 : currentYear
+    setCurrentMonth(newMonth)
+    setCurrentYear(newYear)
+    fetchEvents(newMonth, newYear)
   }
 
   const getEventsForDay = (day: number) => {
@@ -82,6 +86,7 @@ export function CalendarioContent({ events, isLideranca }: CalendarioContentProp
     startTransition(async () => {
       await createCalendarEvent(formData)
       setShowCreate(false)
+      await fetchEvents(currentMonth, currentYear)
       router.refresh()
     })
   }
@@ -89,6 +94,7 @@ export function CalendarioContent({ events, isLideranca }: CalendarioContentProp
   async function handleDelete(eventId: string) {
     startTransition(async () => {
       await deleteCalendarEvent(eventId)
+      await fetchEvents(currentMonth, currentYear)
       router.refresh()
     })
   }
