@@ -12,6 +12,13 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   const supabase = await createClient()
   const today = new Date().toISOString().split("T")[0]
 
+  // Expire overdue pending tasks first
+  await supabase
+    .from("tasks")
+    .update({ status: "expirada" })
+    .eq("status", "pendente")
+    .lt("prazo", new Date().toISOString())
+
   const { data: tasks } = await supabase
     .from("tasks")
     .select("status, setor")

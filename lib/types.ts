@@ -70,6 +70,9 @@ export interface CalendarEvent {
 export interface Challenge {
   id: string
   nome: string
+  descricao: string | null
+  data_inicio: string | null
+  data_fim: string | null
   ativa: boolean
   criado_em: string
 }
@@ -116,6 +119,24 @@ export interface TemporarySchedule {
   turno_id: string
   criado_por: string
   profile?: Profile
+  shift?: Shift
+}
+
+export interface Scale {
+  id: string
+  user_id: string
+  tipo: "fixa" | "provisoria"
+  criado_em: string
+  profile?: Profile
+  scale_days?: ScaleDay[]
+}
+
+export interface ScaleDay {
+  id: string
+  scale_id: string
+  dia_semana: number
+  setor: string
+  turno_id: string
   shift?: Shift
 }
 

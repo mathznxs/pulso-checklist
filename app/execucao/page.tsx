@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { Navbar } from "@/components/pulso/navbar"
 import { getCurrentUser } from "@/lib/actions/auth"
-import { getTodayTasks } from "@/lib/actions/tasks"
+import { getAllTasks } from "@/lib/actions/tasks"
 import { getAllProfiles } from "@/lib/actions/admin"
 import { ExecucaoContent } from "@/components/pulso/execucao-content"
 import { redirect } from "next/navigation"
@@ -11,15 +11,15 @@ export default async function ExecucaoPage() {
   const { profile } = await getCurrentUser()
   if (!profile) redirect("/auth/login")
 
+  const isLideranca =
+    profile.cargo === "lideranca" ||
+    profile.cargo === "gerente" ||
+    profile.cargo === "admin"
+
   const [tasks, profiles] = await Promise.all([
-    getTodayTasks(),
+    getAllTasks({ role: profile.cargo, userId: profile.id }),
     getAllProfiles(),
   ])
-
-  const isLideranca =
-    profile?.cargo === "lideranca" ||
-    profile?.cargo === "gerente" ||
-    profile?.cargo === "admin"
 
   return (
     <div className="min-h-screen bg-background">

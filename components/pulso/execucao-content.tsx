@@ -4,9 +4,9 @@ import { useState, useTransition, useRef, useCallback } from "react"
 import type { Task, Profile, TaskSubmission } from "@/lib/types"
 import {
   createTask,
-  updateTaskStatus,
   submitTask,
   deleteTask,
+  reopenTask,
   validateSubmission,
   getSubmissionsForTask,
 } from "@/lib/actions/tasks"
@@ -42,9 +42,9 @@ import {
   Send,
   Camera,
   Upload,
-  Image as ImageIcon,
   X,
   MessageSquare,
+  RotateCcw,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
@@ -87,6 +87,14 @@ const statusConfig = {
   },
 }
 
+const statusOrder: Record<string, number> = {
+  pendente: 0,
+  aguardando: 1,
+  ressalva: 2,
+  expirada: 3,
+  concluida: 4,
+}
+
 interface ExecucaoContentProps {
   initialTasks: Task[]
   profiles: Profile[]
@@ -103,6 +111,7 @@ export function ExecucaoContent({
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [setorFilter, setSetorFilter] = useState<string>("all")
+  const [userFilter, setUserFilter] = useState<string>("all")
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showSubmitDialog, setShowSubmitDialog] = useState<string | null>(null)
   const [showValidateDialog, setShowValidateDialog] = useState<string | null>(null)
@@ -122,14 +131,24 @@ export function ExecucaoContent({
     new Set(profiles.map((p) => p.setor_base).filter(Boolean))
   ) as string[]
 
-  const filteredTasks = initialTasks.filter((task) => {
-    const matchesSearch =
-      task.titulo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.atribuido_profile?.nome?.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = statusFilter === "all" || task.status === statusFilter
-    const matchesSetor = setorFilter === "all" || task.setor === setorFilter
-    return matchesSearch && matchesStatus && matchesSetor
-  })
+  const activeProfiles = profiles.filter((p) => p.ativo)
+
+  const filteredTasks = initialTasks
+    .filter((task) => {
+      const matchesSearch =
+        task.titulo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        task.atribuido_profile?.nome?.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesStatus = statusFilter === "all" || task.status === statusFilter
+      const matchesSetor = setorFilter === "all" || task.setor === setorFilter
+      const matchesUser = userFilter === "all" || task.atribuido_para === userFilter
+      return matchesSearch && matchesStatus && matchesSetor && matchesUser
+    })
+    .sort((a, b) => {
+      const orderA = statusOrder[a.status] ?? 99
+      const orderB = statusOrder[b.status] ?? 99
+      if (orderA !== orderB) return orderA - orderB
+      return new Date(b.prazo).getTime() - new Date(a.prazo).getTime()
+    })
 
   function handlePhotoCapture(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -193,6 +212,13 @@ export function ExecucaoContent({
     })
   }
 
+  async function handleReopenTask(taskId: string) {
+    startTransition(async () => {
+      await reopenTask(taskId)
+      router.refresh()
+    })
+  }
+
   const handleOpenValidate = useCallback(async (taskId: string) => {
     setShowValidateDialog(taskId)
     setValidateFeedback("")
@@ -219,6 +245,17 @@ export function ExecucaoContent({
     })
   }
 
+  function formatPrazo(prazo: string) {
+    const d = new Date(prazo)
+    return d.toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
@@ -226,7 +263,7 @@ export function ExecucaoContent({
         <div>
           <h1 className="text-xl font-bold text-foreground">Execucao</h1>
           <p className="text-sm text-muted-foreground">
-            {initialTasks.length} tarefas para hoje
+            {filteredTasks.length} tarefa{filteredTasks.length !== 1 ? "s" : ""}
           </p>
         </div>
         {isLideranca && (
@@ -276,7 +313,7 @@ export function ExecucaoContent({
                     className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
                   >
                     <option value="">Selecione</option>
-                    {profiles.filter((p) => p.ativo).map((p) => (
+                    {activeProfiles.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.nome} ({p.matricula})
                       </option>
@@ -294,8 +331,8 @@ export function ExecucaoContent({
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
+        <div className="relative flex-1 min-w-[180px]">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar tarefas..."
@@ -322,19 +359,34 @@ export function ExecucaoContent({
             <SelectValue placeholder="Setor" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="all">Todos Setores</SelectItem>
             {sectors.map((s) => (
               <SelectItem key={s} value={s}>{s}</SelectItem>
             ))}
           </SelectContent>
         </Select>
+        {isLideranca && (
+          <Select value={userFilter} onValueChange={setUserFilter}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder="Colaborador" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {activeProfiles.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {/* Task Cards */}
       <div className="flex flex-col gap-3">
         {filteredTasks.length === 0 ? (
           <div className="rounded-xl border border-border bg-card px-6 py-12 text-center">
-            <p className="text-muted-foreground">Nenhuma tarefa encontrada para hoje</p>
+            <p className="text-muted-foreground">Nenhuma tarefa encontrada</p>
           </div>
         ) : (
           filteredTasks.map((task) => {
@@ -351,27 +403,25 @@ export function ExecucaoContent({
               >
                 <div className="flex flex-col gap-3">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <StatusIcon className={cn("h-4 w-4 shrink-0", config.color)} />
-                        <h3 className="font-semibold text-foreground">{task.titulo}</h3>
+                        <h3 className="truncate font-semibold text-foreground">{task.titulo}</h3>
                       </div>
                       {task.descricao && (
-                        <p className="mt-1 text-sm text-muted-foreground">{task.descricao}</p>
+                        <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{task.descricao}</p>
                       )}
-                      <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                         {task.setor && (
                           <span className="rounded-full bg-card px-2 py-0.5 font-medium border border-border">
                             {task.setor}
                           </span>
                         )}
-                        <span>Atribuido: {task.atribuido_profile?.nome ?? "N/A"}</span>
-                        <span>
-                          Prazo:{" "}
-                          {new Date(task.prazo).toLocaleTimeString("pt-BR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                        <span className="truncate">
+                          {task.atribuido_profile?.nome ?? "N/A"}
+                        </span>
+                        <span className="shrink-0">
+                          Prazo: {formatPrazo(task.prazo)}
                         </span>
                       </div>
                     </div>
@@ -436,7 +486,6 @@ export function ExecucaoContent({
                                 </div>
                               ) : (
                                 <div className="flex gap-2">
-                                  {/* Camera button (mobile) */}
                                   <input
                                     ref={cameraInputRef}
                                     type="file"
@@ -454,8 +503,6 @@ export function ExecucaoContent({
                                     <Camera className="mr-2 h-4 w-4" />
                                     Camera
                                   </Button>
-
-                                  {/* File upload button */}
                                   <input
                                     ref={fileInputRef}
                                     type="file"
@@ -514,6 +561,20 @@ export function ExecucaoContent({
                       </Button>
                     )}
 
+                    {/* Lideranca reopen expired */}
+                    {isLideranca && task.status === "expirada" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-amber-600 hover:bg-amber-50 bg-transparent dark:hover:bg-amber-950/50"
+                        onClick={() => handleReopenTask(task.id)}
+                        disabled={isPending}
+                      >
+                        <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+                        Reabrir
+                      </Button>
+                    )}
+
                     {/* Lideranca delete */}
                     {isLideranca && (
                       <Button
@@ -565,7 +626,7 @@ export function ExecucaoContent({
                   )}
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                     <span>
-                      Status:{" "}
+                      {"Status: "}
                       <span className={cn(
                         "font-medium",
                         sub.status_validacao === "aprovada" && "text-emerald-600",
@@ -576,7 +637,7 @@ export function ExecucaoContent({
                       </span>
                     </span>
                     <span>
-                      Enviado em: {new Date(sub.criado_em).toLocaleString("pt-BR")}
+                      {"Enviado em: "}{new Date(sub.criado_em).toLocaleString("pt-BR")}
                     </span>
                   </div>
                   {sub.feedback_lideranca && (

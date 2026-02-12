@@ -4,24 +4,59 @@ import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import type { Task, TaskSubmission } from "@/lib/types"
 
-export async function getTodayTasks(
-  setor?: string,
-  status?: string
-): Promise<Task[]> {
+/**
+ * Expire overdue tasks at query time.
+ * Sets status = 'expirada' for all tasks where status = 'pendente' AND prazo < now.
+ */
+async function expireOverdueTasks() {
   const supabase = await createClient()
-  const today = new Date().toISOString().split("T")[0]
+  await supabase
+    .from("tasks")
+    .update({ status: "expirada" })
+    .eq("status", "pendente")
+    .lt("prazo", new Date().toISOString())
+}
+
+interface GetAllTasksOptions {
+  role: string
+  userId: string
+  statusFilter?: string
+  setorFilter?: string
+  userFilter?: string
+}
+
+export async function getAllTasks(options: GetAllTasksOptions): Promise<Task[]> {
+  // Run expiration check first
+  await expireOverdueTasks()
+
+  const supabase = await createClient()
 
   let query = supabase
     .from("tasks")
     .select(
       "*, atribuido_profile:profiles!tasks_atribuido_para_fkey(*), criado_profile:profiles!tasks_criado_por_fkey(*)"
     )
-    .gte("prazo", `${today}T00:00:00`)
-    .lte("prazo", `${today}T23:59:59`)
-    .order("prazo", { ascending: true })
+    .order("prazo", { ascending: false })
 
-  if (setor) query = query.eq("setor", setor)
-  if (status) query = query.eq("status", status)
+  const isLeader = ["lideranca", "gerente", "admin"].includes(options.role)
+
+  // Assistentes only see their own tasks
+  if (!isLeader) {
+    query = query.eq("atribuido_para", options.userId)
+  }
+
+  // Lideranca can filter by user
+  if (isLeader && options.userFilter && options.userFilter !== "all") {
+    query = query.eq("atribuido_para", options.userFilter)
+  }
+
+  if (options.statusFilter && options.statusFilter !== "all") {
+    query = query.eq("status", options.statusFilter)
+  }
+
+  if (options.setorFilter && options.setorFilter !== "all") {
+    query = query.eq("setor", options.setorFilter)
+  }
 
   const { data, error } = await query
   if (error) {
@@ -61,6 +96,19 @@ export async function updateTaskStatus(
   const { error } = await supabase
     .from("tasks")
     .update({ status })
+    .eq("id", taskId)
+
+  if (error) return { error: error.message }
+  revalidatePath("/execucao")
+  revalidatePath("/")
+  return {}
+}
+
+export async function reopenTask(taskId: string): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from("tasks")
+    .update({ status: "pendente" })
     .eq("id", taskId)
 
   if (error) return { error: error.message }
