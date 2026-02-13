@@ -224,19 +224,19 @@ export function AdminContent({
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 overflow-x-auto border-b border-border">
+      <div className="-mx-4 flex items-center gap-0 overflow-x-auto border-b border-border px-4 sm:mx-0 sm:gap-1 sm:px-0">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             type="button"
             onClick={() => setActiveTab(tab.key)}
-            className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+            className={`flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-xs font-medium transition-colors sm:gap-2 sm:px-4 sm:text-sm ${
               activeTab === tab.key
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            <tab.icon className="h-4 w-4" />
+            <tab.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             {tab.label}
           </button>
         ))}
@@ -257,9 +257,9 @@ export function AdminContent({
             </div>
             <Dialog open={showCreateUser} onOpenChange={setShowCreateUser}>
               <DialogTrigger asChild>
-                <Button>
+                <Button className="w-full sm:w-auto">
                   <UserPlus className="mr-2 h-4 w-4" />
-                  Novo Usuário
+                  Novo Usuario
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -318,8 +318,58 @@ export function AdminContent({
             </Dialog>
           </div>
 
-          <div className="mt-4 overflow-x-auto rounded-lg border border-border">
-            <table className="w-full min-w-[700px] text-sm">
+          {/* Mobile: Card list */}
+          <div className="mt-4 flex flex-col gap-3 sm:hidden">
+            {filteredProfiles.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">Nenhum usuario encontrado</p>
+            ) : (
+              filteredProfiles.map((user) => {
+                const cargo = cargoConfig[user.cargo] ?? cargoConfig.assistente
+                return (
+                  <div key={user.id} className="flex items-center justify-between rounded-lg border border-border bg-card p-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-sm font-medium text-foreground">{user.setor_base ?? "-"}</p>
+                        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                          user.ativo ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground"
+                        }`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${user.ativo ? "bg-emerald-500" : "bg-muted-foreground"}`} />
+                          {user.ativo ? "Ativo" : "Inativo"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      <button
+                        type="button"
+                        onClick={() => { setShowEditUser(user); setFormError(null) }}
+                        className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        aria-label="Editar usuario"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                      {user.id !== currentProfile.id && (
+                        <button
+                          type="button"
+                          onClick={() => handleToggleActive(user)}
+                          disabled={isPending}
+                          className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted ${
+                            user.ativo ? "text-red-500 hover:text-red-600" : "text-emerald-500 hover:text-emerald-600"
+                          }`}
+                          aria-label={user.ativo ? "Desativar" : "Ativar"}
+                        >
+                          {user.ativo ? <Ban className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+
+          {/* Desktop: Table */}
+          <div className="mt-4 hidden overflow-x-auto rounded-lg border border-border sm:block">
+            <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nome</th>
@@ -328,7 +378,7 @@ export function AdminContent({
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Setor</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    <span className="sr-only">Ações</span>
+                    <span className="sr-only">Acoes</span>
                   </th>
                 </tr>
               </thead>
@@ -336,7 +386,7 @@ export function AdminContent({
                 {filteredProfiles.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                      Nenhum usuário encontrado
+                      Nenhum usuario encontrado
                     </td>
                   </tr>
                 ) : (
@@ -528,8 +578,33 @@ export function AdminContent({
             </Dialog>
           </div>
 
-          <div className="mt-4 overflow-x-auto rounded-lg border border-border">
-            <table className="w-full min-w-[600px] text-sm">
+          {/* Mobile: Card list */}
+          <div className="mt-4 flex flex-col gap-3 sm:hidden">
+            {schedules.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma escala fixa cadastrada</p>
+            ) : (
+              schedules.map((s) => (
+                <div key={s.id} className="rounded-lg border border-border bg-card p-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-foreground">{s.profile?.nome ?? "N/A"}</p>
+                    <p className="text-xs text-muted-foreground">{s.shift?.nome ?? "N/A"}</p>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">{s.setor}</p>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {s.dias_semana.map((d) => (
+                      <span key={d} className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                        {DIAS_SEMANA.find((ds) => ds.value === d)?.label ?? d}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop: Table */}
+          <div className="mt-4 hidden overflow-x-auto rounded-lg border border-border sm:block">
+            <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Funcionario</th>
