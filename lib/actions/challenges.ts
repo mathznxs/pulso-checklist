@@ -32,24 +32,98 @@ export async function createChallenge(
   formData: FormData
 ): Promise<{ error?: string }> {
   const supabase = await createClient()
+  const dataInicio = (formData.get("data_inicio") as string) || null
+  const dataFim = (formData.get("data_fim") as string) || null
+  const descricao = (formData.get("descricao") as string) || null
   const { error } = await supabase.from("challenges").insert({
     nome: formData.get("nome") as string,
+    data_inicio: dataInicio,
+    data_fim: dataFim,
+    descricao: descricao,
   })
   if (error) return { error: error.message }
   revalidatePath("/gincanas")
   return {}
 }
 
-export async function updateScore(
-  challengeId: string,
-  userId: string,
-  pontos: number
+export async function updateChallenge(
+  id: string,
+  data: { nome?: string; data_inicio?: string | null; data_fim?: string | null; descricao?: string | null }
 ): Promise<{ error?: string }> {
   const supabase = await createClient()
+  const { error } = await supabase.from("challenges").update(data).eq("id", id)
+  if (error) return { error: error.message }
+  revalidatePath("/gincanas")
+  return {}
+}
+
+/** Incrementa +1 ponto (acumula, não sobrescreve). */
+export async function incrementScore(
+  challengeId: string,
+  profileId: string
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: existing } = await supabase
+    .from("challenge_scores")
+    .select("pontos")
+    .eq("challenge_id", challengeId)
+    .eq("user_id", profileId)
+    .single()
+  const current = (existing?.pontos as number) ?? 0
   const { error } = await supabase.from("challenge_scores").upsert(
     {
       challenge_id: challengeId,
-      user_id: userId,
+      user_id: profileId,
+      pontos: current + 1,
+      atualizado_em: new Date().toISOString(),
+    },
+    { onConflict: "challenge_id,user_id" }
+  )
+  if (error) return { error: error.message }
+  revalidatePath("/gincanas")
+  return {}
+}
+
+/** Decrementa 1 ponto (mínimo 0). */
+export async function decrementScore(
+  challengeId: string,
+  profileId: string
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: existing } = await supabase
+    .from("challenge_scores")
+    .select("pontos")
+    .eq("challenge_id", challengeId)
+    .eq("user_id", profileId)
+    .single()
+  const current = (existing?.pontos as number) ?? 0
+  const newPontos = Math.max(0, current - 1)
+  const { error } = await supabase.from("challenge_scores").upsert(
+    {
+      challenge_id: challengeId,
+      user_id: profileId,
+      pontos: newPontos,
+      atualizado_em: new Date().toISOString(),
+    },
+    { onConflict: "challenge_id,user_id" }
+  )
+  if (error) return { error: error.message }
+  revalidatePath("/gincanas")
+  return {}
+}
+
+/** Define valor manual de pontos. */
+export async function setScore(
+  challengeId: string,
+  profileId: string,
+  value: number
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const pontos = Math.max(0, value)
+  const { error } = await supabase.from("challenge_scores").upsert(
+    {
+      challenge_id: challengeId,
+      user_id: profileId,
       pontos,
       atualizado_em: new Date().toISOString(),
     },
@@ -58,4 +132,13 @@ export async function updateScore(
   if (error) return { error: error.message }
   revalidatePath("/gincanas")
   return {}
+}
+
+/** @deprecated Use incrementScore/setScore. Mantido para compatibilidade. */
+export async function updateScore(
+  challengeId: string,
+  userId: string,
+  pontos: number
+): Promise<{ error?: string }> {
+  return setScore(challengeId, userId, pontos)
 }

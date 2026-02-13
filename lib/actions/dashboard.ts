@@ -8,15 +8,13 @@ import type {
   Announcement,
 } from "@/lib/types"
 
+/** Métricas reais: todas as tarefas (sem filtro apenas por hoje). */
 export async function getDashboardStats(): Promise<DashboardStats> {
   const supabase = await createClient()
-  const today = new Date().toISOString().split("T")[0]
 
   const { data: tasks } = await supabase
     .from("tasks")
     .select("status, setor")
-    .gte("prazo", `${today}T00:00:00`)
-    .lte("prazo", `${today}T23:59:59`)
 
   const stats: DashboardStats = {
     concluidas: 0,
@@ -27,7 +25,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
   if (tasks) {
     for (const t of tasks) {
-      if (t.status === "concluída") stats.concluidas++
+      if (t.status === "concluida") stats.concluidas++
       else if (t.status === "pendente" || t.status === "aguardando")
         stats.pendentes++
       else if (t.status === "ressalva") stats.ressalvas++
@@ -38,15 +36,11 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   return stats
 }
 
+/** Estatísticas por setor (todas as tarefas). */
 export async function getSectorStats(): Promise<SectorStats[]> {
   const supabase = await createClient()
-  const today = new Date().toISOString().split("T")[0]
 
-  const { data: tasks } = await supabase
-    .from("tasks")
-    .select("status, setor")
-    .gte("prazo", `${today}T00:00:00`)
-    .lte("prazo", `${today}T23:59:59`)
+  const { data: tasks } = await supabase.from("tasks").select("status, setor")
 
   const sectorMap = new Map<
     string,
@@ -60,7 +54,7 @@ export async function getSectorStats(): Promise<SectorStats[]> {
         sectorMap.set(setor, { concluidas: 0, total: 0, pendentes: 0 })
       const s = sectorMap.get(setor)!
       s.total++
-      if (t.status === "concluída") s.concluidas++
+      if (t.status === "concluida") s.concluidas++
       else s.pendentes++
     }
   }
@@ -136,7 +130,7 @@ export async function getWeeklyPerformance(): Promise<
       if (!dayMap.has(dayIdx)) dayMap.set(dayIdx, { total: 0, concluidas: 0 })
       const d = dayMap.get(dayIdx)!
       d.total++
-      if (t.status === "concluída") d.concluidas++
+      if (t.status === "concluida") d.concluidas++
     }
   }
 
@@ -149,6 +143,7 @@ export async function getWeeklyPerformance(): Promise<
   })
 }
 
+/** Performance por funcionário (todas as tarefas). */
 export async function getEmployeePerformance(): Promise<
   {
     matricula: string
@@ -161,15 +156,12 @@ export async function getEmployeePerformance(): Promise<
   }[]
 > {
   const supabase = await createClient()
-  const today = new Date().toISOString().split("T")[0]
 
   const { data: tasks } = await supabase
     .from("tasks")
     .select(
       "status, atribuido_para, atribuido_profile:profiles!tasks_atribuido_para_fkey(matricula, nome, setor_base)"
     )
-    .gte("prazo", `${today}T00:00:00`)
-    .lte("prazo", `${today}T23:59:59`)
 
   if (!tasks || tasks.length === 0) return []
 
@@ -207,7 +199,7 @@ export async function getEmployeePerformance(): Promise<
     }
     const emp = empMap.get(key)!
     emp.total++
-    if (t.status === "concluída") emp.concluidas++
+    if (t.status === "concluida") emp.concluidas++
     else if (t.status === "ressalva") emp.ressalvas++
     else emp.pendentes++
   }

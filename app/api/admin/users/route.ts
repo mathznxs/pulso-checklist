@@ -24,7 +24,8 @@ async function requireLideranca() {
     .eq("id", user.id)
     .single()
 
-  if (!profile || !["liderança", "gerente", "supervisão", "embaixador"].includes(profile.cargo)) {
+  const liderancaCargos = ["lideranca", "liderança", "gerente", "supervisão", "admin", "embaixador"]
+  if (!profile || !liderancaCargos.includes(profile.cargo)) {
     return null
   }
   return user

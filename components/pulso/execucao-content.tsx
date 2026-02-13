@@ -4,11 +4,11 @@ import { useState, useTransition, useRef, useCallback } from "react"
 import type { Task, Profile, TaskSubmission } from "@/lib/types"
 import {
   createTask,
-  updateTaskStatus,
   submitTask,
   deleteTask,
   validateSubmission,
   getSubmissionsForTask,
+  reopenTask,
 } from "@/lib/actions/tasks"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -226,7 +226,8 @@ export function ExecucaoContent({
         <div>
           <h1 className="text-xl font-bold text-foreground">Execução</h1>
           <p className="text-sm text-muted-foreground">
-            {initialTasks.length} tarefas para hoje
+            {initialTasks.length} tarefa{initialTasks.length !== 1 ? "s" : ""}
+            {isLideranca ? " (todas)" : " atribuídas a você"}
           </p>
         </div>
         {isLideranca && (
@@ -334,7 +335,13 @@ export function ExecucaoContent({
       <div className="flex flex-col gap-3">
         {filteredTasks.length === 0 ? (
           <div className="rounded-xl border border-border bg-card px-6 py-12 text-center">
-            <p className="text-muted-foreground">Nenhuma tarefa encontrada para hoje</p>
+            <p className="text-muted-foreground">
+              {initialTasks.length === 0
+                ? isLideranca
+                  ? "Nenhuma tarefa cadastrada"
+                  : "Nenhuma tarefa atribuída a você"
+                : "Nenhuma tarefa corresponde aos filtros"}
+            </p>
           </div>
         ) : (
           filteredTasks.map((task) => {
@@ -511,6 +518,24 @@ export function ExecucaoContent({
                       >
                         <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
                         Validar
+                      </Button>
+                    )}
+
+                    {/* Liderança reabrir tarefa expirada */}
+                    {isLideranca && task.status === "expirada" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-emerald-600 hover:bg-emerald-50 bg-transparent dark:hover:bg-emerald-950/50"
+                        onClick={() =>
+                          startTransition(async () => {
+                            await reopenTask(task.id)
+                            router.refresh()
+                          })
+                        }
+                        disabled={isPending}
+                      >
+                        Reabrir
                       </Button>
                     )}
 

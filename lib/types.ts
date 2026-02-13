@@ -71,6 +71,9 @@ export interface Challenge {
   id: string
   nome: string
   ativa: boolean
+  data_inicio?: string | null
+  data_fim?: string | null
+  descricao?: string | null
   criado_em: string
 }
 
@@ -116,6 +119,16 @@ export interface TemporarySchedule {
   turno_id: string
   criado_por: string
   profile?: Profile
+  shift?: Shift
+}
+
+/** Um dia da escala semanal (modelo scale_days). */
+export interface ScaleDay {
+  id: string
+  profile_id: string
+  dia_semana: number
+  setor: string | null
+  turno_id: string | null
   shift?: Shift
 }
 

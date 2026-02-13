@@ -2,7 +2,7 @@ import { StatusCards } from "./status-cards"
 
 interface OperationalDayProps {
   date: string
-  status: "critico" | "atencao" | "normal" | "otimo"
+  status: "crítico" | "atenção" | "normal" | "ótimo"
   checklistPercentage: number
   statusData: {
     concluidas: number
@@ -12,12 +12,13 @@ interface OperationalDayProps {
   }
 }
 
+// Config usa chaves sem acento; o status é normalizado antes de acessar.
 const statusConfig = {
   critico: { label: "Crítico", dotClass: "bg-red-500", textClass: "text-red-500" },
   atencao: { label: "Atenção", dotClass: "bg-amber-500", textClass: "text-amber-500" },
   normal: { label: "Normal", dotClass: "bg-blue-500", textClass: "text-blue-500" },
-  otimo: { label: "Otimo", dotClass: "bg-emerald-500", textClass: "text-emerald-500" },
-}
+  otimo: { label: "Ótimo", dotClass: "bg-emerald-500", textClass: "text-emerald-500" },
+} as const
 
 export function OperationalDay({
   date,
@@ -25,7 +26,14 @@ export function OperationalDay({
   checklistPercentage,
   statusData,
 }: OperationalDayProps) {
-  const statusInfo = statusConfig[status]
+  const normalizedStatus =
+    status
+      ?.toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") ?? "normal"
+
+  const statusInfo =
+    statusConfig[normalizedStatus as keyof typeof statusConfig] ?? statusConfig.normal
   const progressColor =
     checklistPercentage >= 80
       ? "bg-emerald-500"

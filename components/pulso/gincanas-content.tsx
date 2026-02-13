@@ -3,7 +3,13 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import type { Challenge, ChallengeScore, Profile } from "@/lib/types"
-import { createChallenge, updateScore } from "@/lib/actions/challenges"
+import {
+  createChallenge,
+  incrementScore,
+  decrementScore,
+  setScore,
+} from "@/lib/actions/challenges"
+import { isChallengeEditable } from "@/lib/utils/challenges.utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,7 +20,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Trophy, Medal, Award, Star, Plus, Loader2, TrendingUp } from "lucide-react"
+import { Trophy, Medal, Award, Star, Plus, Loader2, TrendingUp, Minus } from "lucide-react"
 
 interface GincanasContentProps {
   challenges: Challenge[]
@@ -58,11 +64,13 @@ function PodiumCard({
 export function GincanasContent({ challenges, scores, profiles, isLideranca }: GincanasContentProps) {
   const [showCreate, setShowCreate] = useState(false)
   const [showAddScore, setShowAddScore] = useState(false)
+  const [editingScoreId, setEditingScoreId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
 
   const activeChallenge = challenges[0]
   const top3 = scores.slice(0, 3)
+  const editable = activeChallenge ? isChallengeEditable(activeChallenge) : false
 
   async function handleCreate(formData: FormData) {
     startTransition(async () => {
@@ -77,8 +85,33 @@ export function GincanasContent({ challenges, scores, profiles, isLideranca }: G
     const userId = formData.get("user_id") as string
     const pontos = Number(formData.get("pontos"))
     startTransition(async () => {
-      await updateScore(activeChallenge.id, userId, pontos)
+      await setScore(activeChallenge.id, userId, pontos)
       setShowAddScore(false)
+      router.refresh()
+    })
+  }
+
+  async function handleIncrement(profileId: string) {
+    if (!activeChallenge || !editable) return
+    startTransition(async () => {
+      await incrementScore(activeChallenge.id, profileId)
+      router.refresh()
+    })
+  }
+
+  async function handleDecrement(profileId: string) {
+    if (!activeChallenge || !editable) return
+    startTransition(async () => {
+      await decrementScore(activeChallenge.id, profileId)
+      router.refresh()
+    })
+  }
+
+  async function handleSetScore(profileId: string, value: number) {
+    if (!activeChallenge || !editable) return
+    startTransition(async () => {
+      await setScore(activeChallenge.id, profileId, value)
+      setEditingScoreId(null)
       router.refresh()
     })
   }
@@ -96,9 +129,16 @@ export function GincanasContent({ challenges, scores, profiles, isLideranca }: G
         </div>
         <div className="flex items-center gap-2">
           {activeChallenge && (
-            <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2">
-              <Star className="h-4 w-4 text-amber-500" />
-              <span className="text-sm font-semibold text-amber-700">Gincana Ativa</span>
+            <div className="flex items-center gap-2">
+              <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2">
+                <Star className="inline h-4 w-4 text-amber-500" />
+                <span className="ml-1.5 text-sm font-semibold text-amber-700">Gincana Ativa</span>
+              </div>
+              {activeChallenge.data_fim && !editable && (
+                <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">
+                  Encerrada em {new Date(activeChallenge.data_fim).toLocaleDateString("pt-BR")}
+                </span>
+              )}
             </div>
           )}
           {isLideranca && (
@@ -119,6 +159,20 @@ export function GincanasContent({ challenges, scores, profiles, isLideranca }: G
                       <Label htmlFor="nome">Nome</Label>
                       <Input id="nome" name="nome" required placeholder="Gincana Fevereiro 2026" />
                     </div>
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor="descricao">Descrição (opcional)</Label>
+                      <Input id="descricao" name="descricao" placeholder="Objetivo da gincana" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-2">
+                        <Label htmlFor="data_inicio">Data início</Label>
+                        <Input id="data_inicio" name="data_inicio" type="date" />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Label htmlFor="data_fim">Data fim</Label>
+                        <Input id="data_fim" name="data_fim" type="date" />
+                      </div>
+                    </div>
                     <Button type="submit" disabled={isPending}>
                       {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Criar
@@ -129,7 +183,7 @@ export function GincanasContent({ challenges, scores, profiles, isLideranca }: G
               {activeChallenge && (
                 <Dialog open={showAddScore} onOpenChange={setShowAddScore}>
                   <DialogTrigger asChild>
-                    <Button size="sm">
+                    <Button size="sm" disabled={!editable}>
                       <Plus className="mr-1.5 h-3.5 w-3.5" />
                       Adicionar Pontos
                     </Button>
@@ -192,10 +246,10 @@ export function GincanasContent({ challenges, scores, profiles, isLideranca }: G
             <thead>
               <tr className="border-b border-border bg-muted/50">
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">#</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Funcionario</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Funcionário</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Setor</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pontuação</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tendencia</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tendência</th>
               </tr>
             </thead>
             <tbody className="bg-card">
@@ -206,22 +260,84 @@ export function GincanasContent({ challenges, scores, profiles, isLideranca }: G
                   </td>
                 </tr>
               ) : (
-                scores.map((s, idx) => (
-                  <tr key={s.id} className={`border-b border-border transition-colors last:border-b-0 hover:bg-muted/30 ${idx < 3 ? "bg-amber-50/30" : ""}`}>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
-                        idx === 0 ? "bg-amber-100 text-amber-700" : idx === 1 ? "bg-muted text-muted-foreground" : idx === 2 ? "bg-amber-50 text-amber-600" : "text-foreground"
-                      }`}>{idx + 1}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-foreground">{s.profile?.nome ?? "N/A"}</p>
-                      <p className="text-xs text-muted-foreground">{s.profile?.matricula}</p>
-                    </td>
-                    <td className="px-4 py-3 text-foreground">{s.profile?.setor_base ?? ""}</td>
-                    <td className="px-4 py-3 font-bold text-foreground">{s.pontos} pts</td>
-                    <td className="px-4 py-3"><TrendingUp className="h-4 w-4 text-emerald-500" /></td>
-                  </tr>
-                ))
+                scores.map((s, idx) => {
+                  const isEditing = editingScoreId === s.user_id
+                  return (
+                    <tr key={s.id} className={`border-b border-border transition-colors last:border-b-0 hover:bg-muted/30 ${idx < 3 ? "bg-amber-50/30" : ""}`}>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
+                          idx === 0 ? "bg-amber-100 text-amber-700" : idx === 1 ? "bg-muted text-muted-foreground" : idx === 2 ? "bg-amber-50 text-amber-600" : "text-foreground"
+                        }`}>{idx + 1}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-foreground">{s.profile?.nome ?? "N/A"}</p>
+                        <p className="text-xs text-muted-foreground">{s.profile?.matricula}</p>
+                      </td>
+                      <td className="px-4 py-3 text-foreground">{s.profile?.setor_base ?? ""}</td>
+                      <td className="px-4 py-3">
+                        {isLideranca && editable ? (
+                          isEditing ? (
+                            <form
+                              className="flex items-center gap-1"
+                              onSubmit={(e) => {
+                                e.preventDefault()
+                                const input = e.currentTarget.querySelector<HTMLInputElement>("input[name=pontos]")
+                                if (input) {
+                                  startTransition(async () => {
+                                    await handleSetScore(s.user_id, Number(input.value))
+                                  })
+                                }
+                              }}
+                            >
+                              <Input
+                                name="pontos"
+                                type="number"
+                                min={0}
+                                defaultValue={s.pontos}
+                                className="h-8 w-20"
+                              />
+                              <Button type="submit" size="sm" disabled={isPending}>Ok</Button>
+                              <Button type="button" size="sm" variant="ghost" onClick={() => setEditingScoreId(null)}>Cancelar</Button>
+                            </form>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                className="h-8 w-8 shrink-0"
+                                onClick={() => handleDecrement(s.user_id)}
+                                disabled={isPending || s.pontos <= 0}
+                              >
+                                <Minus className="h-4 w-4" />
+                              </Button>
+                              <span className="min-w-[2rem] text-center font-bold text-foreground">{s.pontos} pts</span>
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                className="h-8 w-8 shrink-0"
+                                onClick={() => handleIncrement(s.user_id)}
+                                disabled={isPending}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-xs"
+                                onClick={() => setEditingScoreId(s.user_id)}
+                              >
+                                Editar
+                              </Button>
+                            </div>
+                          )
+                        ) : (
+                          <span className="font-bold text-foreground">{s.pontos} pts</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3"><TrendingUp className="h-4 w-4 text-emerald-500" /></td>
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>

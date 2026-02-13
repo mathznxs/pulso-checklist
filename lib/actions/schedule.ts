@@ -2,9 +2,8 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
-import type { FixedSchedule, Shift } from "@/lib/types"
-
-const DIAS_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"]
+import type { Shift, ScaleDay } from "@/lib/types"
+import { DIAS_LABELS } from "@/lib/utils/schedule.utils"
 
 export interface TodaySchedule {
   setor: string
@@ -49,7 +48,27 @@ export async function getUserTodaySchedule(userId: string): Promise<TodaySchedul
     }
   }
 
-  // Check fixed schedule
+  // Check scale_days (novo modelo semanal)
+  const { data: scaleDay } = await supabase
+    .from("scale_days")
+    .select("setor, turno_id, shift:shifts(*)")
+    .eq("profile_id", userId)
+    .eq("dia_semana", dayOfWeek)
+    .limit(1)
+    .single()
+
+  if (scaleDay && scaleDay.setor && scaleDay.shift) {
+    const shift = scaleDay.shift as unknown as Shift
+    return {
+      setor: scaleDay.setor,
+      turno_nome: shift.nome,
+      turno_inicio: shift.hora_inicio,
+      turno_fim: shift.hora_fim,
+      tipo: "fixa",
+    }
+  }
+
+  // Fallback: fixed_schedule (modelo antigo)
   const { data: fixed } = await supabase
     .from("fixed_schedule")
     .select("setor, turno_id, dias_semana, shift:shifts(*)")
@@ -72,11 +91,41 @@ export async function getUserTodaySchedule(userId: string): Promise<TodaySchedul
   return null
 }
 
+/** Retorna escala semanal do usuário (prefer scale_days, fallback fixed_schedule). */
 export async function getUserWeekSchedule(userId: string): Promise<WeekScheduleDay[]> {
   const supabase = await createClient()
   const week: WeekScheduleDay[] = []
 
-  // Get all fixed schedules for this user
+  // Novo modelo: scale_days (um registro por dia)
+  const { data: scaleDays } = await supabase
+    .from("scale_days")
+    .select("dia_semana, setor, turno_id, shift:shifts(*)")
+    .eq("profile_id", userId)
+
+  if (scaleDays && scaleDays.length > 0) {
+    const byDay = new Map<number, { setor: string | null; shift: Shift | null }>()
+    for (const sd of scaleDays) {
+      const shift = Array.isArray(sd.shift) ? sd.shift[0] : sd.shift
+      byDay.set(sd.dia_semana as number, {
+        setor: sd.setor ?? null,
+        shift: (shift as unknown as Shift) ?? null,
+      })
+    }
+    for (let i = 0; i < 7; i++) {
+      const d = byDay.get(i)
+      week.push({
+        dayIndex: i,
+        dayLabel: DIAS_LABELS[i],
+        setor: d?.setor ?? null,
+        turno_nome: d?.shift?.nome ?? null,
+        turno_inicio: d?.shift?.hora_inicio ?? null,
+        turno_fim: d?.shift?.hora_fim ?? null,
+      })
+    }
+    return week
+  }
+
+  // Fallback: fixed_schedule (modelo antigo)
   const { data: fixedSchedules } = await supabase
     .from("fixed_schedule")
     .select("setor, dias_semana, shift:shifts(*)")
@@ -84,7 +133,6 @@ export async function getUserWeekSchedule(userId: string): Promise<WeekScheduleD
 
   for (let i = 0; i < 7; i++) {
     let found = false
-
     if (fixedSchedules) {
       for (const fs of fixedSchedules) {
         if (fs.dias_semana && (fs.dias_semana as number[]).includes(i)) {
@@ -102,7 +150,6 @@ export async function getUserWeekSchedule(userId: string): Promise<WeekScheduleD
         }
       }
     }
-
     if (!found) {
       week.push({
         dayIndex: i,
@@ -118,6 +165,65 @@ export async function getUserWeekSchedule(userId: string): Promise<WeekScheduleD
   return week
 }
 
+/** Retorna registros scale_days do usuário (para edição em grid). */
+export async function getScaleDaysForUser(profileId: string): Promise<ScaleDay[]> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("scale_days")
+    .select("id, profile_id, dia_semana, setor, turno_id, shift:shifts(*)")
+    .eq("profile_id", profileId)
+    .order("dia_semana", { ascending: true })
+  return (data as unknown as ScaleDay[]) ?? []
+}
+
+/** Salva escala semanal: upsert por (profile_id, dia_semana), evita duplicidade. */
+export async function saveWeeklySchedule(
+  profileId: string,
+  days: { diaSemana: number; setor: string | null; turnoId: string | null }[]
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  for (const d of days) {
+    if (d.setor && d.turnoId) {
+      const { error } = await supabase.from("scale_days").upsert(
+        {
+          profile_id: profileId,
+          dia_semana: d.diaSemana,
+          setor: d.setor,
+          turno_id: d.turnoId,
+        },
+        { onConflict: "profile_id,dia_semana" }
+      )
+      if (error) return { error: error.message }
+    } else {
+      await supabase
+        .from("scale_days")
+        .delete()
+        .eq("profile_id", profileId)
+        .eq("dia_semana", d.diaSemana)
+    }
+  }
+  revalidatePath("/escala")
+  revalidatePath("/admin")
+  return {}
+}
+
+/** Remove um dia da escala. */
+export async function deleteScheduleDay(
+  profileId: string,
+  diaSemana: number
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from("scale_days")
+    .delete()
+    .eq("profile_id", profileId)
+    .eq("dia_semana", diaSemana)
+  if (error) return { error: error.message }
+  revalidatePath("/escala")
+  revalidatePath("/admin")
+  return {}
+}
+
 export async function createTemporarySchedule(
   formData: FormData
 ): Promise<{ error?: string }> {
@@ -125,7 +231,7 @@ export async function createTemporarySchedule(
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { error: "Naã autenticado" }
+  if (!user) return { error: "Não autenticado" }
 
   const { error } = await supabase.from("temporary_schedule").insert({
     user_id: formData.get("user_id") as string,
@@ -190,7 +296,33 @@ export async function getTodayAllSchedules(): Promise<
     }
   }
 
-  // Get fixed schedules for today's day of week
+  // scale_days (novo modelo)
+  const { data: scaleDaysAll } = await supabase
+    .from("scale_days")
+    .select("profile_id, setor, shift:shifts(nome), profile:profiles(nome, matricula)")
+    .eq("dia_semana", dayOfWeek)
+    .not("setor", "is", null)
+
+  if (scaleDaysAll) {
+    for (const sd of scaleDaysAll) {
+      if (tempUserIds.has(sd.profile_id)) continue
+      const profile = sd.profile as unknown as { nome: string; matricula: string } | null
+      const shift = sd.shift as unknown as { nome: string } | null
+      if (profile && shift && sd.setor) {
+        result.push({
+          userId: sd.profile_id,
+          nome: profile.nome,
+          matricula: profile.matricula,
+          setor: sd.setor,
+          turno_nome: shift.nome,
+          tipo: "fixa",
+        })
+        tempUserIds.add(sd.profile_id)
+      }
+    }
+  }
+
+  // Fallback: fixed_schedule (modelo antigo)
   const { data: fixedAll } = await supabase
     .from("fixed_schedule")
     .select("user_id, setor, dias_semana, shift:shifts(nome), profile:profiles(nome, matricula)")
@@ -198,7 +330,7 @@ export async function getTodayAllSchedules(): Promise<
 
   if (fixedAll) {
     for (const f of fixedAll) {
-      if (tempUserIds.has(f.user_id)) continue // temp takes priority
+      if (tempUserIds.has(f.user_id)) continue
       const profile = f.profile as unknown as { nome: string; matricula: string } | null
       const shift = f.shift as unknown as { nome: string } | null
       if (profile && shift) {

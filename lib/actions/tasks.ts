@@ -4,10 +4,16 @@ import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import type { Task, TaskSubmission } from "@/lib/types"
 
-export async function getTodayTasks(
-  setor?: string,
+/** Liderança: todas as tarefas da loja, qualquer data/usuário. Assistente: todas atribuídas a ele, qualquer data. */
+export async function getTasksForRole(options: {
+  userId: string
+  isLideranca: boolean
+  setor?: string
   status?: string
-): Promise<Task[]> {
+  dataInicio?: string
+  dataFim?: string
+  usuarioId?: string
+}): Promise<Task[]> {
   const supabase = await createClient()
   const today = new Date().toISOString().split("T")[0]
 
@@ -16,19 +22,69 @@ export async function getTodayTasks(
     .select(
       "*, atribuido_profile:profiles!tasks_atribuido_para_fkey(*), criado_profile:profiles!tasks_criado_por_fkey(*)"
     )
-    .gte("prazo", `${today}T00:00:00`)
-    .lte("prazo", `${today}T23:59:59`)
-    .order("prazo", { ascending: true })
+    .order("prazo", { ascending: false })
 
-  if (setor) query = query.eq("setor", setor)
-  if (status) query = query.eq("status", status)
+  if (options.isLideranca) {
+    // Liderança: todas as tarefas; filtros opcionais
+    if (options.usuarioId) query = query.eq("atribuido_para", options.usuarioId)
+    if (options.dataInicio) query = query.gte("prazo", `${options.dataInicio}T00:00:00`)
+    if (options.dataFim) query = query.lte("prazo", `${options.dataFim}T23:59:59`)
+  } else {
+    // Assistente: apenas tarefas atribuídas a ele, qualquer data
+    query = query.eq("atribuido_para", options.userId)
+  }
+
+  if (options.setor) query = query.eq("setor", options.setor)
+  if (options.status) query = query.eq("status", options.status)
 
   const { data, error } = await query
   if (error) {
     console.error("Error fetching tasks:", error)
     return []
   }
-  return (data as Task[]) ?? []
+
+  const tasks = (data as Task[]) ?? []
+
+  // Marcar PENDENTE com prazo < hoje como expirada (só visual; persistir em batch opcional)
+  const normalized = tasks.map((t) => {
+    if (t.status === "pendente" && t.prazo < `${today}T00:00:00`) {
+      return { ...t, status: "expirada" as const }
+    }
+    return t
+  })
+
+  return normalized
+}
+
+/** @deprecated Use getTasksForRole. Mantido para compatibilidade. */
+export async function getTodayTasks(
+  setor?: string,
+  status?: string
+): Promise<Task[]> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("cargo")
+    .eq("id", user.id)
+    .single()
+
+  const isLideranca =
+    profile?.cargo === "lideranca" ||
+    profile?.cargo === "gerente" ||
+    profile?.cargo === "admin" ||
+    profile?.cargo === "supervisão"
+
+  return getTasksForRole({
+    userId: user.id,
+    isLideranca: !!isLideranca,
+    setor,
+    status,
+  })
 }
 
 export async function createTask(formData: FormData): Promise<{ error?: string }> {
@@ -128,7 +184,7 @@ export async function validateSubmission(
 
   await supabase
     .from("tasks")
-    .update({ status: approved ? "concluída" : "ressalva" })
+    .update({ status: approved ? "concluida" : "ressalva" })
     .eq("id", submission.task_id)
 
   revalidatePath("/execucao")
@@ -155,5 +211,33 @@ export async function deleteTask(taskId: string): Promise<{ error?: string }> {
   if (error) return { error: error.message }
   revalidatePath("/execucao")
   revalidatePath("/")
+  return {}
+}
+
+/** Liderança: reabrir tarefa expirada (status → pendente). */
+export async function reopenTask(taskId: string): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from("tasks")
+    .update({ status: "pendente" })
+    .eq("id", taskId)
+    .eq("status", "expirada")
+  if (error) return { error: error.message }
+  revalidatePath("/execucao")
+  revalidatePath("/")
+  return {}
+}
+
+/** Marca como expirada todas as tarefas PENDENTE com prazo antes de hoje. */
+export async function markExpiredTasks(): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const today = new Date().toISOString().split("T")[0]
+  const { error } = await supabase
+    .from("tasks")
+    .update({ status: "expirada" })
+    .eq("status", "pendente")
+    .lt("prazo", `${today}T00:00:00`)
+  if (error) return { error: error.message }
+  // Sem revalidatePath aqui: esta função deve ser usada por ações/cron, nunca durante render.
   return {}
 }
