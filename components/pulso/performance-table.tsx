@@ -95,9 +95,9 @@ export function PerformanceTable({ data }: PerformanceTableProps) {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Performance por Funcionário
+          Performance por Funcionario
         </h3>
         <div className="flex items-center gap-2">
           <button
@@ -106,7 +106,7 @@ export function PerformanceTable({ data }: PerformanceTableProps) {
             className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
           >
             <Download className="h-3.5 w-3.5" />
-            Exportar CSV
+            <span className="hidden sm:inline">Exportar</span> CSV
           </button>
           <button
             type="button"
@@ -114,7 +114,7 @@ export function PerformanceTable({ data }: PerformanceTableProps) {
             className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
           >
             <Printer className="h-3.5 w-3.5" />
-            Imprimir
+            <span className="hidden sm:inline">Imprimir</span>
           </button>
         </div>
       </div>

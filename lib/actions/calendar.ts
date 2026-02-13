@@ -32,7 +32,7 @@ export async function createCalendarEvent(
   if (!user) return { error: "Não autenticado" }
 
   const { error } = await supabase.from("calendar_events").insert({
-    titulo: formData.get("título") as string,
+    titulo: formData.get("titulo") as string,
     tipo: formData.get("tipo") as string,
     data_inicio: formData.get("data_inicio") as string,
     data_fim: (formData.get("data_fim") as string) || null,

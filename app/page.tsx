@@ -73,7 +73,7 @@ export default async function DashboardPage() {
       <Navbar profile={profile} />
       {announcement && <AnnouncementBanner message={announcement.message} />}
 
-      <main className="mx-auto max-w-7xl px-4 py-6 lg:px-6">
+      <main className="mx-auto max-w-7xl px-4 py-6 pb-24 md:pb-6 lg:px-6">
         <div className="flex flex-col gap-6">
           <OperationalDay
             date={formatDate()}

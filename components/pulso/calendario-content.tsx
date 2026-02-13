@@ -162,9 +162,9 @@ export function CalendarioContent({ events: initialEvents, isLideranca }: Calend
 
       <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
         {/* Calendar Grid */}
-        <div className="rounded-xl border border-border bg-card p-5">
+        <div className="rounded-xl border border-border bg-card p-3 sm:p-5">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-foreground">
+            <h2 className="text-base font-bold text-foreground sm:text-lg">
               {MONTHS[currentMonth]} {currentYear}
             </h2>
             <div className="flex items-center gap-1">
@@ -177,39 +177,51 @@ export function CalendarioContent({ events: initialEvents, isLideranca }: Calend
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-7 gap-px">
-            {DAYS.map((day) => (
-              <div key={day} className="py-2 text-center text-xs font-semibold uppercase text-muted-foreground">{day}</div>
-            ))}
-            {Array.from({ length: firstDay }).map((_, i) => (
-              <div key={`empty-${i}`} className="min-h-[80px] p-1" />
-            ))}
-            {Array.from({ length: daysInMonth }).map((_, i) => {
-              const day = i + 1
-              const dayEvents = getEventsForDay(day)
-              return (
-                <div
-                  key={day}
-                  className={`min-h-[80px] rounded-md border p-1.5 transition-colors ${
-                    isToday(day) ? "border-primary bg-primary/5" : "border-transparent hover:bg-muted/50"
-                  }`}
-                >
-                  <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
-                    isToday(day) ? "bg-primary text-primary-foreground" : "text-foreground"
-                  }`}>{day}</span>
-                  <div className="mt-0.5 flex flex-col gap-0.5">
-                    {dayEvents.slice(0, 2).map((event) => (
-                      <div key={event.id} className={`truncate rounded px-1 py-0.5 text-[10px] font-medium ${eventTypeConfig[event.tipo]?.bgClass ?? "bg-muted"}`}>
-                        {event.titulo}
-                      </div>
-                    ))}
-                    {dayEvents.length > 2 && (
-                      <span className="text-[10px] text-muted-foreground">+{dayEvents.length - 2} mais</span>
-                    )}
+          <div className="-mx-3 mt-4 overflow-x-auto px-3 sm:mx-0 sm:px-0">
+            <div className="grid min-w-[480px] grid-cols-7 gap-px sm:min-w-0">
+              {DAYS.map((day) => (
+                <div key={day} className="py-2 text-center text-[10px] font-semibold uppercase text-muted-foreground sm:text-xs">{day}</div>
+              ))}
+              {Array.from({ length: firstDay }).map((_, i) => (
+                <div key={`empty-${i}`} className="min-h-[60px] p-1 sm:min-h-[80px]" />
+              ))}
+              {Array.from({ length: daysInMonth }).map((_, i) => {
+                const day = i + 1
+                const dayEvents = getEventsForDay(day)
+                return (
+                  <div
+                    key={day}
+                    className={`min-h-[60px] rounded-md border p-1 transition-colors sm:min-h-[80px] sm:p-1.5 ${
+                      isToday(day) ? "border-primary bg-primary/5" : "border-transparent hover:bg-muted/50"
+                    }`}
+                  >
+                    <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-medium sm:h-6 sm:w-6 sm:text-xs ${
+                      isToday(day) ? "bg-primary text-primary-foreground" : "text-foreground"
+                    }`}>{day}</span>
+                    <div className="mt-0.5 flex flex-col gap-0.5">
+                      {dayEvents.slice(0, 2).map((event) => (
+                        <div key={event.id} className="flex items-center gap-0.5 sm:gap-0">
+                          {/* Mobile: just show dot; Desktop: show full label */}
+                          <span className={`block h-1.5 w-1.5 shrink-0 rounded-full sm:hidden ${eventTypeConfig[event.tipo]?.dotClass ?? "bg-muted-foreground"}`} />
+                          <span className={`hidden truncate rounded px-1 py-0.5 text-[10px] font-medium sm:block ${eventTypeConfig[event.tipo]?.bgClass ?? "bg-muted"}`}>
+                            {event.titulo}
+                          </span>
+                        </div>
+                      ))}
+                      {dayEvents.length > 2 && (
+                        <span className="hidden text-[10px] text-muted-foreground sm:block">+{dayEvents.length - 2} mais</span>
+                      )}
+                      {dayEvents.length > 0 && dayEvents.length <= 2 && (
+                        <span className="text-[10px] text-muted-foreground sm:hidden">{dayEvents.length}</span>
+                      )}
+                      {dayEvents.length > 2 && (
+                        <span className="text-[10px] text-muted-foreground sm:hidden">{dayEvents.length}</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
         </div>
 

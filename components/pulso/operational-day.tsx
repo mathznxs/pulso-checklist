@@ -42,14 +42,14 @@ export function OperationalDay({
         : "bg-red-500"
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 lg:p-6">
+    <div className="rounded-xl border border-border bg-card p-4 sm:p-5 lg:p-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Dia Operacional
           </p>
-          <h2 className="mt-1 text-lg font-bold text-foreground lg:text-xl">
+          <h2 className="mt-1 text-base font-bold text-foreground sm:text-lg lg:text-xl">
             {date}
           </h2>
         </div>
