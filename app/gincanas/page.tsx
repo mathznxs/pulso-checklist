@@ -22,7 +22,7 @@ export default async function GincanasPage() {
     : []
 
   const isLideranca =
-    profile?.cargo === "lideranca" ||
+    profile?.cargo === "supervisão" ||
     profile?.cargo === "gerente" ||
     profile?.cargo === "admin"
 

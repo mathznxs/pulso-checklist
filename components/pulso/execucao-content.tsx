@@ -65,7 +65,7 @@ const statusConfig = {
     darkBg: "dark:bg-blue-950/30 dark:border-blue-800",
   },
   concluida: {
-    label: "Concluida",
+    label: "Concluída",
     icon: CheckCircle2,
     color: "text-emerald-600",
     bg: "bg-emerald-50 border-emerald-200",
@@ -224,7 +224,7 @@ export function ExecucaoContent({
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold text-foreground">Execucao</h1>
+          <h1 className="text-xl font-bold text-foreground">Execução</h1>
           <p className="text-sm text-muted-foreground">
             {initialTasks.length} tarefas para hoje
           </p>
@@ -243,11 +243,11 @@ export function ExecucaoContent({
               </DialogHeader>
               <form action={handleCreateTask} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="titulo">Titulo</Label>
+                  <Label htmlFor="titulo">Título</Label>
                   <Input id="titulo" name="titulo" required />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="descricao">Descricao</Label>
+                  <Label htmlFor="descricao">Descrição</Label>
                   <Textarea id="descricao" name="descricao" rows={3} />
                 </div>
                 <div className="flex flex-col gap-2">
@@ -312,7 +312,7 @@ export function ExecucaoContent({
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="pendente">Pendentes</SelectItem>
             <SelectItem value="aguardando">Aguardando</SelectItem>
-            <SelectItem value="concluida">Concluidas</SelectItem>
+            <SelectItem value="concluida">Concluídas</SelectItem>
             <SelectItem value="ressalva">Ressalvas</SelectItem>
             <SelectItem value="expirada">Expiradas</SelectItem>
           </SelectContent>
@@ -365,7 +365,7 @@ export function ExecucaoContent({
                             {task.setor}
                           </span>
                         )}
-                        <span>Atribuido: {task.atribuido_profile?.nome ?? "N/A"}</span>
+                        <span>Atribuído: {task.atribuido_profile?.nome ?? "N/A"}</span>
                         <span>
                           Prazo:{" "}
                           {new Date(task.prazo).toLocaleTimeString("pt-BR", {
@@ -410,13 +410,13 @@ export function ExecucaoContent({
                             className="flex flex-col gap-4"
                           >
                             <div className="flex flex-col gap-2">
-                              <Label htmlFor="comentario">Comentario</Label>
+                              <Label htmlFor="comentario">Comentário</Label>
                               <Textarea id="comentario" name="comentario" rows={3} placeholder="Descreva o que foi feito..." />
                             </div>
 
                             {/* Photo capture/upload */}
                             <div className="flex flex-col gap-2">
-                              <Label>Foto da execucao</Label>
+                              <Label>Foto da execução</Label>
                               {photoPreview ? (
                                 <div className="relative">
                                   <img
@@ -452,7 +452,7 @@ export function ExecucaoContent({
                                     onClick={() => cameraInputRef.current?.click()}
                                   >
                                     <Camera className="mr-2 h-4 w-4" />
-                                    Camera
+                                    Câmera
                                   </Button>
 
                                   {/* File upload button */}
@@ -541,14 +541,14 @@ export function ExecucaoContent({
       >
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Detalhes da Submissao</DialogTitle>
+            <DialogTitle>Detalhes da Submissão</DialogTitle>
           </DialogHeader>
           {loadingSubmissions ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : submissions.length === 0 ? (
-            <p className="py-4 text-sm text-muted-foreground">Nenhuma submissao encontrada.</p>
+            <p className="py-4 text-sm text-muted-foreground">Nenhuma submissão encontrada.</p>
           ) : (
             <div className="flex flex-col gap-4">
               {submissions.map((sub) => (
@@ -556,7 +556,7 @@ export function ExecucaoContent({
                   {sub.imagem_assistente && (
                     <img
                       src={sub.imagem_assistente}
-                      alt="Foto da execucao"
+                      alt="Foto da execução"
                       className="mb-3 h-48 w-full rounded-lg border border-border object-cover"
                     />
                   )}
@@ -581,7 +581,7 @@ export function ExecucaoContent({
                   </div>
                   {sub.feedback_lideranca && (
                     <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
-                      <p className="text-xs font-medium text-amber-800 dark:text-amber-300">Feedback da Lideranca:</p>
+                      <p className="text-xs font-medium text-amber-800 dark:text-amber-300">Feedback da Liderança:</p>
                       <p className="mt-1 text-sm text-amber-700 dark:text-amber-400">{sub.feedback_lideranca}</p>
                     </div>
                   )}
@@ -611,7 +611,7 @@ export function ExecucaoContent({
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : submissions.length === 0 ? (
-            <p className="py-4 text-sm text-muted-foreground">Nenhuma submissao pendente.</p>
+            <p className="py-4 text-sm text-muted-foreground">Nenhuma submissão pendente.</p>
           ) : (
             <div className="flex flex-col gap-4">
               {submissions
@@ -627,7 +627,7 @@ export function ExecucaoContent({
                     )}
                     {sub.comentario_assistente && (
                       <div className="rounded-md bg-muted/50 p-3">
-                        <p className="text-xs font-medium text-muted-foreground">Comentario do Assistente:</p>
+                        <p className="text-xs font-medium text-muted-foreground">Comentário do Assistente:</p>
                         <p className="mt-1 text-sm text-foreground">{sub.comentario_assistente}</p>
                       </div>
                     )}

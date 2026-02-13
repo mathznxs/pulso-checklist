@@ -10,21 +10,21 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.json({ error: "Nao autenticado" }, { status: 401 })
+    return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
   }
 
   const formData = await request.formData()
   const file = formData.get("file") as File | null
 
   if (!file) {
-    return NextResponse.json({ error: "Arquivo nao enviado" }, { status: 400 })
+    return NextResponse.json({ error: "Arquivo não enviado" }, { status: 400 })
   }
 
   // Validate file type
   const allowed = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]
   if (!allowed.includes(file.type)) {
     return NextResponse.json(
-      { error: "Tipo de arquivo nao permitido. Use JPG, PNG ou WebP." },
+      { error: "Tipo de arquivo não permitido. Use JPG, PNG ou WebP." },
       { status: 400 }
     )
   }

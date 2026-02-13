@@ -28,7 +28,7 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
   return (
     <div className="rounded-xl border border-border bg-card p-5 lg:p-6">
       <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Execucao da Semana
+        Execução da Semana
       </h3>
       <div className="mt-4 h-56">
         <ResponsiveContainer width="100%" height="100%">

@@ -17,7 +17,7 @@ export default async function ExecucaoPage() {
   ])
 
   const isLideranca =
-    profile?.cargo === "lideranca" ||
+    profile?.cargo === "supervisão" ||
     profile?.cargo === "gerente" ||
     profile?.cargo === "admin"
 

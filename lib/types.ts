@@ -1,4 +1,4 @@
-export type Cargo = "assistente" | "lideranca" | "gerente" | "admin"
+export type Cargo = "assistente" | "supervisão" | "gerente" | "admin" | "embaixador"
 
 export type TaskStatus =
   | "pendente"
@@ -12,11 +12,11 @@ export type SubmissionStatus = "pendente" | "aprovada" | "devolvida"
 export type EventType =
   | "evento"
   | "visita"
-  | "lancamento"
+  | "lançamento"
   | "folga"
   | "critico"
 
-export type OperationalStatus = "critico" | "atencao" | "normal" | "otimo"
+export type OperationalStatus = "crítico" | "atenção" | "normal" | "ótimo"
 
 export interface Profile {
   id: string

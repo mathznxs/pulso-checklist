@@ -18,7 +18,7 @@ export default async function AdminPage() {
   if (!profile) redirect("/auth/login")
 
   const isLideranca =
-    profile.cargo === "lideranca" ||
+    profile.cargo === "supervisão" ||
     profile.cargo === "gerente" ||
     profile.cargo === "admin"
 

@@ -27,7 +27,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
   if (tasks) {
     for (const t of tasks) {
-      if (t.status === "concluida") stats.concluidas++
+      if (t.status === "concluída") stats.concluidas++
       else if (t.status === "pendente" || t.status === "aguardando")
         stats.pendentes++
       else if (t.status === "ressalva") stats.ressalvas++
@@ -60,7 +60,7 @@ export async function getSectorStats(): Promise<SectorStats[]> {
         sectorMap.set(setor, { concluidas: 0, total: 0, pendentes: 0 })
       const s = sectorMap.get(setor)!
       s.total++
-      if (t.status === "concluida") s.concluidas++
+      if (t.status === "concluída") s.concluidas++
       else s.pendentes++
     }
   }
@@ -78,12 +78,12 @@ export async function getOperationalStatus(): Promise<OperationalStatus> {
   const stats = await getDashboardStats()
   const total =
     stats.concluidas + stats.pendentes + stats.ressalvas + stats.expiradas
-  if (total === 0) return "critico"
+  if (total === 0) return "crítico"
   const pct = (stats.concluidas / total) * 100
-  if (pct >= 90) return "otimo"
+  if (pct >= 90) return "ótimo"
   if (pct >= 70) return "normal"
-  if (pct >= 50) return "atencao"
-  return "critico"
+  if (pct >= 50) return "atenção"
+  return "crítico"
 }
 
 export async function getChecklistPercentage(): Promise<number> {
@@ -136,7 +136,7 @@ export async function getWeeklyPerformance(): Promise<
       if (!dayMap.has(dayIdx)) dayMap.set(dayIdx, { total: 0, concluidas: 0 })
       const d = dayMap.get(dayIdx)!
       d.total++
-      if (t.status === "concluida") d.concluidas++
+      if (t.status === "concluída") d.concluidas++
     }
   }
 
@@ -207,7 +207,7 @@ export async function getEmployeePerformance(): Promise<
     }
     const emp = empMap.get(key)!
     emp.total++
-    if (t.status === "concluida") emp.concluidas++
+    if (t.status === "concluída") emp.concluidas++
     else if (t.status === "ressalva") emp.ressalvas++
     else emp.pendentes++
   }

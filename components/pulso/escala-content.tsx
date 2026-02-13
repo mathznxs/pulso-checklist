@@ -19,7 +19,7 @@ import { MapPin, Clock, CalendarDays, Plus, Loader2, AlertTriangle } from "lucid
 
 const SETORES = [
   "Masculino", "Feminino", "Futebol", "Ilha", "Infantil",
-  "Anfitriao", "Caixa", "OMS", "Provador",
+  "Anfitriao", "Caixa", "OMS", "Provador", "Estoque",
 ]
 
 interface EscalaContentProps {
@@ -31,7 +31,7 @@ interface EscalaContentProps {
     matricula: string
     setor: string
     turno_nome: string
-    tipo: "fixa" | "provisoria"
+    tipo: "fixa" | "provisória"
   }[]
   shifts: Shift[]
   profiles: Profile[]
@@ -88,7 +88,7 @@ export function EscalaContent({
               </div>
               {todaySchedule.tipo === "provisoria" && (
                 <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
-                  Provisoria
+                  Provisória
                 </span>
               )}
             </div>
@@ -99,7 +99,7 @@ export function EscalaContent({
           <div className="flex items-center gap-3">
             <AlertTriangle className="h-5 w-5 text-amber-500" />
             <p className="text-sm text-muted-foreground">
-              Voce nao tem escala configurada para hoje. Fale com a lideranca.
+              Voce não tem uma escala configurada para hoje. Fale com a liderança.
             </p>
           </div>
         </div>
@@ -111,7 +111,7 @@ export function EscalaContent({
           <h1 className="text-xl font-bold text-foreground">Escala</h1>
           <p className="text-sm text-muted-foreground">
             {isLideranca
-              ? "Visualize a escala geral e crie alteracoes provisorias"
+              ? "Visualize a escala geral e crie alterações provisórias"
               : "Sua escala semanal"}
           </p>
         </div>
@@ -120,16 +120,16 @@ export function EscalaContent({
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="mr-1.5 h-3.5 w-3.5" />
-                Escala Provisoria
+                Escala Provisória
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Criar Escala Provisoria</DialogTitle>
+                <DialogTitle>Criar Escala Provisória</DialogTitle>
               </DialogHeader>
               <form action={handleCreateTemp} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="tp-user">Funcionario</Label>
+                  <Label htmlFor="tp-user">Funcionário</Label>
                   <select
                     id="tp-user"
                     name="user_id"
@@ -181,7 +181,7 @@ export function EscalaContent({
                   </select>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  A escala provisoria nao afeta a escala fixa e se aplica apenas ao dia selecionado.
+                  A escala provisória não afeta a escala fixa e se aplica apenas ao dia selecionado.
                 </p>
                 <Button type="submit" disabled={isPending}>
                   {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -244,7 +244,7 @@ export function EscalaContent({
             <table className="w-full min-w-[500px] text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Funcionario</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Funcionário</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Setor</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Turno</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tipo</th>

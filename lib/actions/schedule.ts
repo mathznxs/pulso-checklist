@@ -125,7 +125,7 @@ export async function createTemporarySchedule(
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { error: "Nao autenticado" }
+  if (!user) return { error: "Naã autenticado" }
 
   const { error } = await supabase.from("temporary_schedule").insert({
     user_id: formData.get("user_id") as string,

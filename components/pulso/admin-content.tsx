@@ -39,14 +39,14 @@ import {
 
 const cargoConfig: Record<string, { label: string; bgClass: string }> = {
   assistente: { label: "Assistente", bgClass: "bg-blue-50 text-blue-700" },
-  lideranca: { label: "Lideranca", bgClass: "bg-amber-50 text-amber-700" },
+  supervisão: { label: "Supervisão", bgClass: "bg-amber-50 text-amber-700" },
   gerente: { label: "Gerente", bgClass: "bg-emerald-50 text-emerald-700" },
   admin: { label: "Admin", bgClass: "bg-red-50 text-red-700" },
 }
 
 const SETORES = [
   "Masculino", "Feminino", "Futebol", "Ilha", "Infantil",
-  "Anfitriao", "Caixa", "OMS", "Provador",
+  "Anfitrião", "Caixa", "OMS", "Provador", "estoque",
 ]
 
 const DIAS_SEMANA = [
@@ -92,7 +92,7 @@ export function AdminContent({
   )
 
   const tabs = [
-    { key: "usuarios" as const, label: "Usuarios", icon: Users },
+    { key: "usuarios" as const, label: "Usuários", icon: Users },
     { key: "escalas" as const, label: "Escalas", icon: Calendar },
     { key: "turnos" as const, label: "Turnos", icon: Clock },
     { key: "sistema" as const, label: "Sistema", icon: Settings },
@@ -110,7 +110,7 @@ export function AdminContent({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          matricula: formData.get("matricula"),
+          matricula: formData.get("matrícula"),
           nome: formData.get("nome"),
           cpf: formData.get("cpf"),
           cargo: formData.get("cargo"),
@@ -216,9 +216,9 @@ export function AdminContent({
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-foreground">Administracao</h1>
+          <h1 className="text-xl font-bold text-foreground">Administração</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Gerenciamento de usuarios, escalas e configuracoes
+            Gerenciamento de usuários, escalas e configurações
           </p>
         </div>
       </div>
@@ -249,7 +249,7 @@ export function AdminContent({
             <div className="relative flex-1 sm:max-w-xs">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Buscar por nome ou matricula..."
+                placeholder="Buscar por nome ou matrícula..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -259,17 +259,17 @@ export function AdminContent({
               <DialogTrigger asChild>
                 <Button>
                   <UserPlus className="mr-2 h-4 w-4" />
-                  Novo Usuario
+                  Novo Usuário
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Criar Novo Usuario</DialogTitle>
+                  <DialogTitle>Criar Novo Usuário</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleCreateUser} className="flex flex-col gap-4">
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="cu-matricula">Matricula</Label>
-                    <Input id="cu-matricula" name="matricula" required placeholder="Ex: 10234" />
+                    <Label htmlFor="cu-matricula">Matrácula</Label>
+                    <Input id="cu-matricula" name="matrícula" required placeholder="Ex: 10234" />
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="cu-nome">Nome Completo</Label>
@@ -288,9 +288,9 @@ export function AdminContent({
                       className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
                     >
                       <option value="assistente">Assistente</option>
-                      <option value="lideranca">Lideranca</option>
+                      <option value="supervisão">Supervisor</option>
                       <option value="gerente">Gerente</option>
-                      <option value="admin">Admin</option>
+                      <option value="embaixador">Embaixador</option>
                     </select>
                   </div>
                   <div className="flex flex-col gap-2">
@@ -311,7 +311,7 @@ export function AdminContent({
                   )}
                   <Button type="submit" disabled={isPending}>
                     {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Criar Usuario
+                    Criar Usuário
                   </Button>
                 </form>
               </DialogContent>
@@ -328,7 +328,7 @@ export function AdminContent({
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Setor</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    <span className="sr-only">Acoes</span>
+                    <span className="sr-only">Ações</span>
                   </th>
                 </tr>
               </thead>
@@ -336,7 +336,7 @@ export function AdminContent({
                 {filteredProfiles.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                      Nenhum usuario encontrado
+                      Nenhum usuário encontrado
                     </td>
                   </tr>
                 ) : (
@@ -397,12 +397,12 @@ export function AdminContent({
           <Dialog open={showEditUser !== null} onOpenChange={(open) => !open && setShowEditUser(null)}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Editar Usuario</DialogTitle>
+                <DialogTitle>Editar Usuário</DialogTitle>
               </DialogHeader>
               {showEditUser && (
                 <form onSubmit={handleEditUser} className="flex flex-col gap-4">
                   <div className="flex flex-col gap-2">
-                    <Label>Matricula</Label>
+                    <Label>Matrícula</Label>
                     <Input value={showEditUser.matricula} disabled className="bg-muted" />
                   </div>
                   <div className="flex flex-col gap-2">
@@ -418,9 +418,9 @@ export function AdminContent({
                       className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
                     >
                       <option value="assistente">Assistente</option>
-                      <option value="lideranca">Lideranca</option>
+                      <option value="lideranca">Supervisão</option>
                       <option value="gerente">Gerente</option>
-                      <option value="admin">Admin</option>
+                      <option value="embaixador">Embaixador</option>
                     </select>
                   </div>
                   <div className="flex flex-col gap-2">
@@ -440,7 +440,7 @@ export function AdminContent({
                   {formError && <p className="text-sm text-destructive">{formError}</p>}
                   <Button type="submit" disabled={isPending}>
                     {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Salvar Alteracoes
+                    Salvar Alterações
                   </Button>
                 </form>
               )}
@@ -467,7 +467,7 @@ export function AdminContent({
                 </DialogHeader>
                 <form onSubmit={handleCreateSchedule} className="flex flex-col gap-4">
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="cs-user">Funcionario</Label>
+                    <Label htmlFor="cs-user">Funcionário</Label>
                     <select
                       id="cs-user"
                       name="user_id"
@@ -591,7 +591,7 @@ export function AdminContent({
                     <Input id="st-nome" name="nome" required placeholder="Ex: Manha" />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="st-inicio">Hora Inicio</Label>
+                    <Label htmlFor="st-inicio">Hora Início</Label>
                     <Input id="st-inicio" name="hora_inicio" type="time" required />
                   </div>
                   <div className="flex flex-col gap-2">
@@ -629,10 +629,10 @@ export function AdminContent({
       {activeTab === "sistema" && (
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="rounded-lg border border-border bg-card p-5">
-            <h4 className="text-sm font-semibold text-foreground">Informacoes do Sistema</h4>
+            <h4 className="text-sm font-semibold text-foreground">Informações do Sistema</h4>
             <div className="mt-4 flex flex-col gap-3 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Versao</span>
+                <span className="text-muted-foreground">Versão</span>
                 <span className="font-medium text-foreground">3.0</span>
               </div>
               <div className="flex items-center justify-between">
@@ -650,23 +650,23 @@ export function AdminContent({
             </div>
           </div>
 
-          <div className="rounded-lg border border-border bg-card p-5">
+          {/* <div className="rounded-lg border border-border bg-card p-5">
             <h4 className="text-sm font-semibold text-foreground">Configuracoes de Login</h4>
             <div className="mt-4 flex flex-col gap-3 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Login via</span>
-                <span className="font-medium text-foreground">Matricula</span>
+                <span className="font-medium text-foreground">Matrícula</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Senha</span>
                 <span className="font-medium text-foreground">CPF</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Autenticacao</span>
+                <span className="text-muted-foreground">Autenticação</span>
                 <span className="font-medium text-foreground">Supabase Auth</span>
               </div>
             </div>
-          </div>
+          </div> */}
 
           <div className="rounded-lg border border-border bg-card p-5 sm:col-span-2">
             <div className="flex items-center justify-between">

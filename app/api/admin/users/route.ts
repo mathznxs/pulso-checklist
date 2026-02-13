@@ -24,7 +24,7 @@ async function requireLideranca() {
     .eq("id", user.id)
     .single()
 
-  if (!profile || !["lideranca", "gerente", "admin"].includes(profile.cargo)) {
+  if (!profile || !["liderança", "gerente", "supervisão", "embaixador"].includes(profile.cargo)) {
     return null
   }
   return user
@@ -33,7 +33,7 @@ async function requireLideranca() {
 export async function POST(request: Request) {
   const caller = await requireLideranca()
   if (!caller) {
-    return NextResponse.json({ error: "Sem permissao" }, { status: 403 })
+    return NextResponse.json({ error: "Sem permissão" }, { status: 403 })
   }
 
   const body = await request.json()
@@ -41,14 +41,14 @@ export async function POST(request: Request) {
 
   if (!matricula || !nome || !cpf || !cargo) {
     return NextResponse.json(
-      { error: "Campos obrigatorios: matricula, nome, cpf, cargo" },
+      { error: "Campos obrigatórios: matrícula, nome, cpf, cargo" },
       { status: 400 }
     )
   }
 
   const cleanCpf = cpf.replace(/\D/g, "")
   if (cleanCpf.length !== 11) {
-    return NextResponse.json({ error: "CPF invalido" }, { status: 400 })
+    return NextResponse.json({ error: "CPF inválido" }, { status: 400 })
   }
 
   const email = `${matricula}@pulso.centauro.local`
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
   if (authError) {
     if (authError.message.includes("already been registered")) {
       return NextResponse.json(
-        { error: "Matricula ja cadastrada no sistema" },
+        { error: "Matrícula já cadastrada no sistema" },
         { status: 409 }
       )
     }
@@ -103,14 +103,14 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   const caller = await requireLideranca()
   if (!caller) {
-    return NextResponse.json({ error: "Sem permissao" }, { status: 403 })
+    return NextResponse.json({ error: "Sem permissão" }, { status: 403 })
   }
 
   const body = await request.json()
   const { userId, nome, cargo, setor_base, ativo } = body
 
   if (!userId) {
-    return NextResponse.json({ error: "userId obrigatorio" }, { status: 400 })
+    return NextResponse.json({ error: "userId obrigatório" }, { status: 400 })
   }
 
   const adminSupabase = await getAdminSupabase()

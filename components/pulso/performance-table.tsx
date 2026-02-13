@@ -58,10 +58,10 @@ export function PerformanceTable({ data }: PerformanceTableProps) {
     p >= 80 ? "text-emerald-600" : p >= 50 ? "text-amber-600" : "text-red-600"
 
   const columns: { key: SortKey; label: string }[] = [
-    { key: "matricula", label: "Matricula" },
-    { key: "nome", label: "Funcionario" },
+    { key: "matricula", label: "Matrícula" },
+    { key: "nome", label: "Funcionário" },
     { key: "setor", label: "Setor" },
-    { key: "concluidas", label: "Concluidas" },
+    { key: "concluidas", label: "Concluídas" },
     { key: "pendentes", label: "Pendentes" },
     { key: "ressalvas", label: "Ressalvas" },
     { key: "percentual", label: "%" },
@@ -69,7 +69,7 @@ export function PerformanceTable({ data }: PerformanceTableProps) {
 
   function exportCSV() {
     const today = new Date().toISOString().split("T")[0]
-    const header = "Matricula;Funcionario;Setor;Concluidas;Pendentes;Ressalvas;Percentual\n"
+    const header = "Matrícula;Funcionário;Setor;Concluídas;Pendentes;Ressalvas;Percentual\n"
     const rows = sortedData
       .map(
         (e) =>
@@ -97,7 +97,7 @@ export function PerformanceTable({ data }: PerformanceTableProps) {
     <div>
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Performance por Funcionario
+          Performance por Funcionário
         </h3>
         <div className="flex items-center gap-2">
           <button
@@ -142,7 +142,7 @@ export function PerformanceTable({ data }: PerformanceTableProps) {
                   colSpan={columns.length}
                   className="px-4 py-8 text-center text-muted-foreground"
                 >
-                  Nenhum dado de performance disponivel para hoje
+                  Nenhum dado de performance disponível para hoje
                 </td>
               </tr>
             ) : (

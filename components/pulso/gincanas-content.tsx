@@ -140,7 +140,7 @@ export function GincanasContent({ challenges, scores, profiles, isLideranca }: G
                     </DialogHeader>
                     <form action={handleAddScore} className="flex flex-col gap-4">
                       <div className="flex flex-col gap-2">
-                        <Label htmlFor="user_id">Funcionario</Label>
+                        <Label htmlFor="user_id">Funcionário</Label>
                         <select
                           id="user_id"
                           name="user_id"
@@ -194,7 +194,7 @@ export function GincanasContent({ challenges, scores, profiles, isLideranca }: G
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">#</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Funcionario</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Setor</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pontuacao</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pontuação</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tendencia</th>
               </tr>
             </thead>
@@ -202,7 +202,7 @@ export function GincanasContent({ challenges, scores, profiles, isLideranca }: G
               {scores.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
-                    {activeChallenge ? "Nenhuma pontuacao registrada ainda" : "Crie uma gincana para comecar"}
+                    {activeChallenge ? "Nenhuma pontuação registrada ainda" : "Crie uma gincana para começar"}
                   </td>
                 </tr>
               ) : (

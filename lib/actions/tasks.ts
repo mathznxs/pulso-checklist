@@ -36,11 +36,11 @@ export async function createTask(formData: FormData): Promise<{ error?: string }
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { error: "Nao autenticado" }
+  if (!user) return { error: "Não autenticado" }
 
   const { error } = await supabase.from("tasks").insert({
-    titulo: formData.get("titulo") as string,
-    descricao: (formData.get("descricao") as string) || null,
+    titulo: formData.get("título") as string,
+    descricao: (formData.get("descrição") as string) || null,
     prazo: formData.get("prazo") as string,
     setor: (formData.get("setor") as string) || null,
     atribuido_para: formData.get("atribuido_para") as string,
@@ -78,7 +78,7 @@ export async function submitTask(
   const { error: subError } = await supabase.from("task_submissions").insert({
     task_id: taskId,
     comentario_assistente:
-      (formData.get("comentario") as string) || null,
+      (formData.get("comentário") as string) || null,
     imagem_assistente:
       (formData.get("imagem_url") as string) || null,
   })
@@ -104,7 +104,7 @@ export async function validateSubmission(
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { error: "Nao autenticado" }
+  if (!user) return { error: "Não autenticado" }
 
   const { data: submission, error: fetchErr } = await supabase
     .from("task_submissions")
@@ -112,7 +112,7 @@ export async function validateSubmission(
     .eq("id", submissionId)
     .single()
 
-  if (fetchErr || !submission) return { error: "Submissao nao encontrada" }
+  if (fetchErr || !submission) return { error: "Submissão não encontrada" }
 
   const { error } = await supabase
     .from("task_submissions")
@@ -128,7 +128,7 @@ export async function validateSubmission(
 
   await supabase
     .from("tasks")
-    .update({ status: approved ? "concluida" : "ressalva" })
+    .update({ status: approved ? "concluída" : "ressalva" })
     .eq("id", submission.task_id)
 
   revalidatePath("/execucao")

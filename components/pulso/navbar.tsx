@@ -18,25 +18,27 @@ import { useRouter } from "next/navigation"
 
 const navItems = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard, minCargo: "assistente" as Cargo },
-  { label: "Execucao", href: "/execucao", icon: ClipboardCheck, minCargo: "assistente" as Cargo },
-  { label: "Calendario", href: "/calendario", icon: Calendar, minCargo: "assistente" as Cargo },
+  { label: "Execução", href: "/execucao", icon: ClipboardCheck, minCargo: "assistente" as Cargo },
+  { label: "Calendário", href: "/calendario", icon: Calendar, minCargo: "assistente" as Cargo },
   { label: "Gincanas", href: "/gincanas", icon: Trophy, minCargo: "assistente" as Cargo },
   { label: "Escala", href: "/escala", icon: CalendarClock, minCargo: "assistente" as Cargo },
-  { label: "Admin", href: "/admin", icon: Settings, minCargo: "lideranca" as Cargo },
+  { label: "Admin", href: "/admin", icon: Settings, minCargo: "supervisão" as Cargo },
 ]
 
 const cargoOrder: Record<Cargo, number> = {
   assistente: 0,
-  lideranca: 1,
+  supervisão: 1,
   gerente: 2,
   admin: 3,
+  embaixador: 0
 }
 
 const cargoLabels: Record<Cargo, string> = {
   assistente: "Assistente",
-  lideranca: "Lideranca",
+  supervisão: "Supervisão",
   gerente: "Gerente",
   admin: "Administrador",
+  embaixador: ""
 }
 
 interface NavbarProps {
@@ -110,7 +112,7 @@ export function Navbar({ profile }: NavbarProps) {
         <div className="flex items-center gap-3">
           <div className="hidden text-right sm:block">
             <p className="text-sm font-semibold text-foreground">
-              {profile?.nome ?? "Usuario"}
+              {profile?.nome ?? "Usuário"}
             </p>
             <p className="text-xs text-muted-foreground">
               {cargoLabels[userCargo]}

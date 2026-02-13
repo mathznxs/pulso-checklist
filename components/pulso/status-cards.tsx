@@ -10,7 +10,7 @@ interface StatusData {
 export function StatusCards({ data }: { data: StatusData }) {
   const cards = [
     {
-      label: "Concluidas",
+      label: "Concluídas",
       value: data.concluidas,
       icon: CheckCircle2,
       bgClass: "bg-emerald-50",

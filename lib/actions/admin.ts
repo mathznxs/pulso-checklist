@@ -88,7 +88,7 @@ export async function updateAnnouncement(
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { error: "Nao autenticado" }
+  if (!user) return { error: "Não autenticado" }
 
   // Deactivate existing
   await supabase.from("announcements").update({ ativo: false }).eq("ativo", true)

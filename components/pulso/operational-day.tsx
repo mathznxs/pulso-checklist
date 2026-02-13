@@ -13,8 +13,8 @@ interface OperationalDayProps {
 }
 
 const statusConfig = {
-  critico: { label: "Critico", dotClass: "bg-red-500", textClass: "text-red-500" },
-  atencao: { label: "Atencao", dotClass: "bg-amber-500", textClass: "text-amber-500" },
+  critico: { label: "Crítico", dotClass: "bg-red-500", textClass: "text-red-500" },
+  atencao: { label: "Atenção", dotClass: "bg-amber-500", textClass: "text-amber-500" },
   normal: { label: "Normal", dotClass: "bg-blue-500", textClass: "text-blue-500" },
   otimo: { label: "Otimo", dotClass: "bg-emerald-500", textClass: "text-emerald-500" },
 }

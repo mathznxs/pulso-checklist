@@ -29,7 +29,7 @@ const eventTypeConfig: Record<
 
 const DAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"]
 const MONTHS = [
-  "Janeiro", "Fevereiro", "Marco", "Abril", "Maio", "Junho",
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ]
 
@@ -107,9 +107,9 @@ export function CalendarioContent({ events: initialEvents, isLideranca }: Calend
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold text-foreground">Calendario Operacional</h1>
+          <h1 className="text-xl font-bold text-foreground">Calendário Operacional</h1>
           <p className="text-sm text-muted-foreground">
-            Eventos, visitas, lancamentos e datas criticas
+            Eventos, visitas, lançamentos e datas importantes
           </p>
         </div>
         {isLideranca && (
@@ -126,7 +126,7 @@ export function CalendarioContent({ events: initialEvents, isLideranca }: Calend
               </DialogHeader>
               <form action={handleCreate} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="titulo">Titulo</Label>
+                  <Label htmlFor="titulo">Título</Label>
                   <Input id="titulo" name="titulo" required />
                 </div>
                 <div className="flex flex-col gap-2">
@@ -216,12 +216,12 @@ export function CalendarioContent({ events: initialEvents, isLideranca }: Calend
         {/* Sidebar */}
         <div className="rounded-xl border border-border bg-card p-5">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Proximos Eventos
+            Próximos Eventos
           </h3>
           <div className="mt-4 flex flex-col gap-3">
             {sortedEvents.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
-                Nenhum evento neste mes
+                Nenhum evento neste mês
               </p>
             ) : (
               sortedEvents.map((event) => {

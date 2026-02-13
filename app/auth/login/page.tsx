@@ -38,7 +38,7 @@ export default function LoginPage() {
     const cleanCpf = cpf.replace(/\D/g, "")
 
     if (!cleanMatricula) {
-      setError("Informe sua matricula.")
+      setError("Informe sua matrícula.")
       setLoading(false)
       return
     }
@@ -58,7 +58,7 @@ export default function LoginPage() {
     })
 
     if (authError) {
-      setError("Credenciais invalidas. Verifique sua matricula e CPF.")
+      setError("Credenciais inválidas. Verifique sua matrícula e CPF.")
       setLoading(false)
       return
     }
@@ -89,13 +89,13 @@ export default function LoginPage() {
             </span>
           </div>
           <p className="text-sm text-muted-foreground">
-            Sistema de Execucao Operacional
+            Sistema de Execução Operacional
           </p>
         </div>
 
         <form onSubmit={handleLogin} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="matricula">Matricula</Label>
+            <Label htmlFor="matricula">Matrícula</Label>
             <Input
               id="matricula"
               type="text"
@@ -143,7 +143,7 @@ export default function LoginPage() {
         </form>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
-          Centauro Pulso v3.0 - Acesso restrito a colaboradores
+          Centauro Pulso - Acesso restrito a colaboradores
         </p>
       </div>
     </div>

@@ -23,16 +23,16 @@ function formatDate(): string {
   const days = [
     "Domingo",
     "Segunda-Feira",
-    "Terca-Feira",
+    "Terça-Feira",
     "Quarta-Feira",
     "Quinta-Feira",
     "Sexta-Feira",
-    "Sabado",
+    "Sábado",
   ]
   const months = [
     "Janeiro",
     "Fevereiro",
-    "Marco",
+    "Março",
     "Abril",
     "Maio",
     "Junho",

@@ -14,7 +14,7 @@ export default async function CalendarioPage() {
   const events = await getCalendarEvents(now.getMonth() + 1, now.getFullYear())
 
   const isLideranca =
-    profile?.cargo === "lideranca" ||
+    profile?.cargo === "supervisão" ||
     profile?.cargo === "gerente" ||
     profile?.cargo === "admin"
 

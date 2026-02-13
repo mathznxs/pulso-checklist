@@ -6,7 +6,7 @@ export default function AuthErrorPage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="text-center">
         <h1 className="text-2xl font-bold text-foreground">
-          Erro de Autenticacao
+          Erro de Autenticação
         </h1>
         <p className="mt-2 text-muted-foreground">
           Ocorreu um erro ao tentar autenticar. Tente novamente.

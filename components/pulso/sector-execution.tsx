@@ -37,7 +37,7 @@ function SectorCard({ sector }: { sector: SectorData }) {
       </div>
       <div className="mt-2.5 flex items-center gap-3 text-xs">
         <span className="text-muted-foreground">
-          {sector.concluidas}/{sector.total} concluidas
+          {sector.concluidas}/{sector.total} concluídas
         </span>
         <span className="text-red-500">
           {sector.pendentes} pendentes
@@ -51,7 +51,7 @@ export function SectorExecution({ sectors }: { sectors: SectorData[] }) {
   return (
     <div>
       <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Execucao por Setor
+        Execução por Setor
       </h3>
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {sectors.map((sector) => (
