@@ -83,7 +83,6 @@ export function Navbar({ profile }: NavbarProps) {
               </svg>
             </div>
             <span className="text-base font-bold tracking-tight text-foreground md:text-lg">
-              CENTAURO{" "}
               <span className="text-primary">PULSO</span>
             </span>
           </Link>

@@ -115,7 +115,7 @@ export function CalendarioContent({ events: initialEvents, isLideranca }: Calend
         {isLideranca && (
           <Dialog open={showCreate} onOpenChange={setShowCreate}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
                 Novo Evento
               </Button>
@@ -177,51 +177,42 @@ export function CalendarioContent({ events: initialEvents, isLideranca }: Calend
             </div>
           </div>
 
-          <div className="-mx-3 mt-4 overflow-x-auto px-3 sm:mx-0 sm:px-0">
-            <div className="grid min-w-[480px] grid-cols-7 gap-px sm:min-w-0">
-              {DAYS.map((day) => (
-                <div key={day} className="py-2 text-center text-[10px] font-semibold uppercase text-muted-foreground sm:text-xs">{day}</div>
-              ))}
-              {Array.from({ length: firstDay }).map((_, i) => (
-                <div key={`empty-${i}`} className="min-h-[60px] p-1 sm:min-h-[80px]" />
-              ))}
-              {Array.from({ length: daysInMonth }).map((_, i) => {
-                const day = i + 1
-                const dayEvents = getEventsForDay(day)
-                return (
-                  <div
-                    key={day}
-                    className={`min-h-[60px] rounded-md border p-1 transition-colors sm:min-h-[80px] sm:p-1.5 ${
-                      isToday(day) ? "border-primary bg-primary/5" : "border-transparent hover:bg-muted/50"
-                    }`}
-                  >
-                    <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-medium sm:h-6 sm:w-6 sm:text-xs ${
-                      isToday(day) ? "bg-primary text-primary-foreground" : "text-foreground"
-                    }`}>{day}</span>
-                    <div className="mt-0.5 flex flex-col gap-0.5">
-                      {dayEvents.slice(0, 2).map((event) => (
-                        <div key={event.id} className="flex items-center gap-0.5 sm:gap-0">
-                          {/* Mobile: just show dot; Desktop: show full label */}
-                          <span className={`block h-1.5 w-1.5 shrink-0 rounded-full sm:hidden ${eventTypeConfig[event.tipo]?.dotClass ?? "bg-muted-foreground"}`} />
-                          <span className={`hidden truncate rounded px-1 py-0.5 text-[10px] font-medium sm:block ${eventTypeConfig[event.tipo]?.bgClass ?? "bg-muted"}`}>
-                            {event.titulo}
-                          </span>
-                        </div>
-                      ))}
-                      {dayEvents.length > 2 && (
-                        <span className="hidden text-[10px] text-muted-foreground sm:block">+{dayEvents.length - 2} mais</span>
-                      )}
-                      {dayEvents.length > 0 && dayEvents.length <= 2 && (
-                        <span className="text-[10px] text-muted-foreground sm:hidden">{dayEvents.length}</span>
-                      )}
-                      {dayEvents.length > 2 && (
-                        <span className="text-[10px] text-muted-foreground sm:hidden">{dayEvents.length}</span>
-                      )}
-                    </div>
+          <div className="mt-4 grid grid-cols-7 gap-px">
+            {DAYS.map((day) => (
+              <div key={day} className="py-1.5 text-center text-[10px] font-semibold uppercase text-muted-foreground sm:py-2 sm:text-xs">{day}</div>
+            ))}
+            {Array.from({ length: firstDay }).map((_, i) => (
+              <div key={`empty-${i}`} className="aspect-square p-0.5 sm:aspect-auto sm:min-h-[80px] sm:p-1" />
+            ))}
+            {Array.from({ length: daysInMonth }).map((_, i) => {
+              const day = i + 1
+              const dayEvents = getEventsForDay(day)
+              return (
+                <div
+                  key={day}
+                  className={`aspect-square rounded-md border p-0.5 transition-colors sm:aspect-auto sm:min-h-[80px] sm:p-1.5 ${
+                    isToday(day) ? "border-primary bg-primary/5" : "border-transparent hover:bg-muted/50"
+                  }`}
+                >
+                  <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-medium sm:h-6 sm:w-6 sm:text-xs ${
+                    isToday(day) ? "bg-primary text-primary-foreground" : "text-foreground"
+                  }`}>{day}</span>
+                  <div className="mt-0.5 flex flex-col items-start gap-0.5">
+                    {dayEvents.slice(0, 2).map((event) => (
+                      <span key={event.id} className={`block h-1.5 w-1.5 rounded-full sm:hidden ${eventTypeConfig[event.tipo]?.dotClass ?? "bg-muted-foreground"}`} />
+                    ))}
+                    {dayEvents.slice(0, 2).map((event) => (
+                      <span key={event.id} className={`hidden w-full truncate rounded px-1 py-0.5 text-[10px] font-medium sm:block ${eventTypeConfig[event.tipo]?.bgClass ?? "bg-muted"}`}>
+                        {event.titulo}
+                      </span>
+                    ))}
+                    {dayEvents.length > 2 && (
+                      <span className="text-[9px] text-muted-foreground sm:text-[10px]">+{dayEvents.length - 2}</span>
+                    )}
                   </div>
-                )
-              })}
-            </div>
+                </div>
+              )
+            })}
           </div>
         </div>
 
