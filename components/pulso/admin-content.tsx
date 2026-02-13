@@ -329,7 +329,7 @@ export function AdminContent({
                   <div key={user.id} className="flex items-center justify-between rounded-lg border border-border bg-card p-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="truncate text-sm font-medium text-foreground">{user.setor_base ?? "-"}</p>
+                        <p className="truncate text-sm font-medium text-foreground">{user.nome ?? "-"}</p>
                         <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
                           user.ativo ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground"
                         }`}>
