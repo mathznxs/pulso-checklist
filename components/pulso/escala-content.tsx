@@ -201,36 +201,38 @@ export function EscalaContent({
             Minha Semana
           </h3>
         </div>
-        <div className="mt-4 grid grid-cols-7 gap-2">
-          {weekSchedule.map((day) => {
-            const isToday = day.dayIndex === dayOfWeek
-            return (
-              <div
-                key={day.dayIndex}
-                className={`flex flex-col items-center rounded-lg border p-3 text-center transition-colors ${
-                  isToday
-                    ? "border-primary bg-primary/5"
-                    : day.setor
-                      ? "border-border bg-card"
-                      : "border-border bg-muted/30"
-                }`}
-              >
-                <span className={`text-xs font-bold ${isToday ? "text-primary" : "text-muted-foreground"}`}>
-                  {day.dayLabel}
-                </span>
-                {day.setor ? (
-                  <>
-                    <span className="mt-1 text-sm font-semibold text-foreground">{day.setor}</span>
-                    <span className="mt-0.5 text-[10px] text-muted-foreground">
-                      {day.turno_nome}
-                    </span>
-                  </>
-                ) : (
-                  <span className="mt-1 text-xs text-muted-foreground">Folga</span>
-                )}
-              </div>
-            )
-          })}
+        <div className="-mx-5 mt-4 overflow-x-auto px-5 sm:mx-0 sm:px-0">
+          <div className="flex gap-2 sm:grid sm:grid-cols-7">
+            {weekSchedule.map((day) => {
+              const isToday = day.dayIndex === dayOfWeek
+              return (
+                <div
+                  key={day.dayIndex}
+                  className={`flex min-w-[80px] flex-col items-center rounded-lg border p-3 text-center transition-colors sm:min-w-0 ${
+                    isToday
+                      ? "border-primary bg-primary/5"
+                      : day.setor
+                        ? "border-border bg-card"
+                        : "border-border bg-muted/30"
+                  }`}
+                >
+                  <span className={`text-xs font-bold ${isToday ? "text-primary" : "text-muted-foreground"}`}>
+                    {day.dayLabel}
+                  </span>
+                  {day.setor ? (
+                    <>
+                      <span className="mt-1 text-sm font-semibold text-foreground">{day.setor}</span>
+                      <span className="mt-0.5 text-[10px] text-muted-foreground">
+                        {day.turno_nome}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="mt-1 text-xs text-muted-foreground">Folga</span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
 

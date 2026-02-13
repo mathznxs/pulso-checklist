@@ -110,7 +110,7 @@ export function AdminContent({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          matricula: formData.get("matrícula"),
+          matricula: formData.get("matricula"),
           nome: formData.get("nome"),
           cpf: formData.get("cpf"),
           cargo: formData.get("cargo"),
@@ -269,7 +269,7 @@ export function AdminContent({
                 <form onSubmit={handleCreateUser} className="flex flex-col gap-4">
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="cu-matricula">Matrácula</Label>
-                    <Input id="cu-matricula" name="matrícula" required placeholder="Ex: 10234" />
+                    <Input id="cu-matricula" name="matricula" required placeholder="Ex: 10234" />
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="cu-nome">Nome Completo</Label>

@@ -46,16 +46,16 @@ function PodiumCard({
 
   return (
     <div className="flex flex-col items-center">
-      <div className="flex flex-col items-center gap-1">
-        <div className={`flex h-12 w-12 items-center justify-center rounded-full border-2 ${config.bg}`}>
-          <IconComp className={`h-6 w-6 ${config.iconColor}`} />
+      <div className="flex flex-col items-center gap-0.5 sm:gap-1">
+        <div className={`flex h-9 w-9 items-center justify-center rounded-full border-2 sm:h-12 sm:w-12 ${config.bg}`}>
+          <IconComp className={`h-4 w-4 sm:h-6 sm:w-6 ${config.iconColor}`} />
         </div>
-        <p className="text-sm font-bold text-foreground">{score.profile?.nome ?? "N/A"}</p>
-        <p className="text-xs text-muted-foreground">{score.profile?.setor_base ?? ""}</p>
-        <p className="text-lg font-bold text-foreground">{score.pontos} pts</p>
+        <p className="max-w-[70px] truncate text-xs font-bold text-foreground sm:max-w-none sm:text-sm">{score.profile?.nome ?? "N/A"}</p>
+        <p className="hidden text-xs text-muted-foreground sm:block">{score.profile?.setor_base ?? ""}</p>
+        <p className="text-sm font-bold text-foreground sm:text-lg">{score.pontos} pts</p>
       </div>
-      <div className={`mt-2 flex w-24 items-end justify-center rounded-t-lg border-x border-t ${config.bg} ${config.height}`}>
-        <span className="pb-2 text-2xl font-black text-foreground/30">{config.label}</span>
+      <div className={`mt-1 flex w-16 items-end justify-center rounded-t-lg border-x border-t sm:mt-2 sm:w-24 ${config.bg} ${config.height}`}>
+        <span className="pb-1 text-lg font-black text-foreground/30 sm:pb-2 sm:text-2xl">{config.label}</span>
       </div>
     </div>
   )
@@ -127,12 +127,12 @@ export function GincanasContent({ challenges, scores, profiles, isLideranca }: G
               : "Nenhuma gincana ativa"}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {activeChallenge && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2">
                 <Star className="inline h-4 w-4 text-amber-500" />
-                <span className="ml-1.5 text-sm font-semibold text-amber-700">Gincana Ativa</span>
+                <span className="ml-1.5 text-sm font-semibold text-amber-700">Ativa</span>
               </div>
               {activeChallenge.data_fim && !editable && (
                 <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">
@@ -228,9 +228,9 @@ export function GincanasContent({ challenges, scores, profiles, isLideranca }: G
 
       {/* Podium */}
       {top3.length > 0 && (
-        <div className="rounded-xl border border-border bg-card p-6">
+        <div className="rounded-xl border border-border bg-card p-4 sm:p-6">
           <h3 className="text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">Podio</h3>
-          <div className="mt-6 flex items-end justify-center gap-6">
+          <div className="mt-4 flex items-end justify-center gap-3 sm:mt-6 sm:gap-6">
             {top3[1] && <PodiumCard score={top3[1]} position={2} />}
             {top3[0] && <PodiumCard score={top3[0]} position={1} />}
             {top3[2] && <PodiumCard score={top3[2]} position={3} />}
