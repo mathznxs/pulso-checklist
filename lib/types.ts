@@ -148,6 +148,13 @@ export interface ScaleDay {
   shift?: Shift
 }
 
+export interface Setor {
+  id: string
+  nome: string
+  cor: string
+  ativo: boolean
+}
+
 export interface DashboardStats {
   concluidas: number
   pendentes: number

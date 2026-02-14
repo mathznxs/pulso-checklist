@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { Profile, Shift, FixedSchedule } from "@/lib/types";
+import type { Profile, Shift, FixedSchedule, Setor } from "@/lib/types";
 import {
   createShift,
   createFixedSchedule,
@@ -46,19 +46,6 @@ const cargoConfig: Record<string, { label: string; bgClass: string }> = {
   gerente: { label: "Gerente", bgClass: "bg-emerald-50 text-emerald-700" },
 };
 
-const SETORES = [
-  "Masculino",
-  "Feminino",
-  "Futebol",
-  "Ilha",
-  "Infantil",
-  "Anfitrião",
-  "Caixa",
-  "OMS",
-  "Provador",
-  "Estoque",
-];
-
 const DIAS_SEMANA = [
   { value: 0, label: "Dom" },
   { value: 1, label: "Seg" },
@@ -73,7 +60,7 @@ interface AdminContentProps {
   profiles: Profile[];
   shifts: Shift[];
   schedules: FixedSchedule[];
-  sectors: string[];
+  setores: Setor[];
   currentProfile: Profile;
 }
 
@@ -81,7 +68,7 @@ export function AdminContent({
   profiles,
   shifts,
   schedules,
-  sectors,
+  setores,
   currentProfile,
 }: AdminContentProps) {
   const [activeTab, setActiveTab] = useState<
@@ -319,9 +306,9 @@ export function AdminContent({
                       className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
                     >
                       <option value="">Nenhum</option>
-                      {SETORES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
+                      {setores.map((s) => (
+                        <option key={s.id} value={s.nome}>
+                          {s.nome}
                         </option>
                       ))}
                     </select>
@@ -576,9 +563,9 @@ export function AdminContent({
                       className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
                     >
                       <option value="">Nenhum</option>
-                      {SETORES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
+                      {setores.map((s) => (
+                        <option key={s.id} value={s.nome}>
+                          {s.nome}
                         </option>
                       ))}
                     </select>
@@ -651,9 +638,9 @@ export function AdminContent({
                       className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
                     >
                       <option value="">Selecione</option>
-                      {SETORES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
+                      {setores.map((s) => (
+                        <option key={s.id} value={s.nome}>
+                          {s.nome}
                         </option>
                       ))}
                     </select>

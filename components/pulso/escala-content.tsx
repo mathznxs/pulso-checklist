@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import type { Profile, Shift } from "@/lib/types"
+import type { Profile, Shift, Setor } from "@/lib/types"
 import type { TodaySchedule, WeekScheduleDay } from "@/lib/actions/schedule"
 import { createTemporarySchedule } from "@/lib/actions/schedule"
 import { Button } from "@/components/ui/button"
@@ -17,11 +17,6 @@ import {
 } from "@/components/ui/dialog"
 import { MapPin, Clock, CalendarDays, Plus, Loader2, AlertTriangle } from "lucide-react"
 
-const SETORES = [
-  "Masculino", "Feminino", "Futebol", "Ilha", "Infantil",
-  "Anfitriao", "Caixa", "OMS", "Provador", "Estoque",
-]
-
 interface EscalaContentProps {
   todaySchedule: TodaySchedule | null
   weekSchedule: WeekScheduleDay[]
@@ -31,10 +26,13 @@ interface EscalaContentProps {
     matricula: string
     setor: string
     turno_nome: string
+    turno_inicio?: string
+    turno_fim?: string
     tipo: "fixa" | "provisória"
   }[]
   shifts: Shift[]
   profiles: Profile[]
+  setores: Setor[]
   isLideranca: boolean
   currentProfile: Profile
 }
@@ -45,6 +43,7 @@ export function EscalaContent({
   allSchedules,
   shifts,
   profiles,
+  setores,
   isLideranca,
   currentProfile,
 }: EscalaContentProps) {
@@ -60,6 +59,44 @@ export function EscalaContent({
       setShowTempDialog(false)
       router.refresh()
     })
+  }
+
+  // Group allSchedules by setor for the sector-based view
+  const schedulesBySetor = new Map<string, typeof allSchedules>()
+  for (const s of allSchedules) {
+    if (!schedulesBySetor.has(s.setor)) {
+      schedulesBySetor.set(s.setor, [])
+    }
+    schedulesBySetor.get(s.setor)!.push(s)
+  }
+
+  // Sort each sector's schedules by turno_inicio
+  for (const [, items] of schedulesBySetor) {
+    items.sort((a, b) => (a.turno_inicio ?? "").localeCompare(b.turno_inicio ?? ""))
+  }
+
+  // Build a color map from setores
+  const corMap = new Map<string, string>()
+  for (const setor of setores) {
+    corMap.set(setor.nome, setor.cor)
+  }
+
+  function getSetorStyle(setorNome: string) {
+    const cor = corMap.get(setorNome)
+    if (!cor) return {}
+    return {
+      backgroundColor: cor + "22",
+      borderColor: cor + "66",
+    }
+  }
+
+  function getSetorBadgeStyle(setorNome: string) {
+    const cor = corMap.get(setorNome)
+    if (!cor) return {}
+    return {
+      backgroundColor: cor,
+      color: "#1a1a1a",
+    }
   }
 
   return (
@@ -88,7 +125,7 @@ export function EscalaContent({
               </div>
               {todaySchedule.tipo === "provisoria" && (
                 <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
-                  Provisória
+                  Provisoria
                 </span>
               )}
             </div>
@@ -99,7 +136,7 @@ export function EscalaContent({
           <div className="flex items-center gap-3">
             <AlertTriangle className="h-5 w-5 text-amber-500" />
             <p className="text-sm text-muted-foreground">
-              Voce não tem uma escala configurada para hoje. Fale com a liderança.
+              Voce nao tem uma escala configurada para hoje. Fale com a lideranca.
             </p>
           </div>
         </div>
@@ -111,7 +148,7 @@ export function EscalaContent({
           <h1 className="text-xl font-bold text-foreground">Escala</h1>
           <p className="text-sm text-muted-foreground">
             {isLideranca
-              ? "Visualize a escala geral e crie alterações provisórias"
+              ? "Visualize a escala geral e crie alteracoes provisorias"
               : "Sua escala semanal"}
           </p>
         </div>
@@ -120,16 +157,16 @@ export function EscalaContent({
             <DialogTrigger asChild>
               <Button size="sm">
                 <Plus className="mr-1.5 h-3.5 w-3.5" />
-                Escala Provisória
+                Escala Provisoria
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Criar Escala Provisória</DialogTitle>
+                <DialogTitle>Criar Escala Provisoria</DialogTitle>
               </DialogHeader>
               <form action={handleCreateTemp} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="tp-user">Funcionário</Label>
+                  <Label htmlFor="tp-user">Funcionario</Label>
                   <select
                     id="tp-user"
                     name="user_id"
@@ -151,8 +188,8 @@ export function EscalaContent({
                     className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
                   >
                     <option value="">Selecione</option>
-                    {SETORES.map((s) => (
-                      <option key={s} value={s}>{s}</option>
+                    {setores.map((s) => (
+                      <option key={s.id} value={s.nome}>{s.nome}</option>
                     ))}
                   </select>
                 </div>
@@ -181,7 +218,7 @@ export function EscalaContent({
                   </select>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  A escala provisória não afeta a escala fixa e se aplica apenas ao dia selecionado.
+                  A escala provisoria nao afeta a escala fixa e se aplica apenas ao dia selecionado.
                 </p>
                 <Button type="submit" disabled={isPending}>
                   {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -236,53 +273,81 @@ export function EscalaContent({
         </div>
       </div>
 
-      {/* Lideranca: Full schedule view */}
+      {/* Lideranca: Sector-based schedule view */}
       {isLideranca && (
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Escala Geral de Hoje
+            Escala Geral de Hoje - Por Setor
           </h3>
-          <div className="mt-4 overflow-x-auto rounded-lg border border-border">
-            <table className="w-full min-w-[500px] text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/50">
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Funcionário</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Setor</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Turno</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tipo</th>
-                </tr>
-              </thead>
-              <tbody className="bg-card">
-                {allSchedules.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
-                      Nenhuma escala configurada para hoje
-                    </td>
-                  </tr>
-                ) : (
-                  allSchedules.map((s) => (
-                    <tr key={`${s.userId}-${s.setor}`} className="border-b border-border transition-colors last:border-b-0 hover:bg-muted/30">
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-foreground">{s.nome}</p>
-                        <p className="text-xs text-muted-foreground">{s.matricula}</p>
-                      </td>
-                      <td className="px-4 py-3 text-foreground">{s.setor}</td>
-                      <td className="px-4 py-3 text-foreground">{s.turno_nome}</td>
-                      <td className="px-4 py-3">
-                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          s.tipo === "fixa"
-                            ? "bg-emerald-50 text-emerald-700"
-                            : "bg-amber-50 text-amber-700"
-                        }`}>
-                          {s.tipo === "fixa" ? "Fixa" : "Provisoria"}
+
+          {allSchedules.length === 0 ? (
+            <div className="mt-4 rounded-xl border border-border bg-card px-6 py-12 text-center">
+              <p className="text-muted-foreground">
+                Nenhuma escala configurada para hoje
+              </p>
+            </div>
+          ) : (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {setores
+                .filter((setor) => schedulesBySetor.has(setor.nome))
+                .map((setor) => {
+                  const items = schedulesBySetor.get(setor.nome) ?? []
+                  return (
+                    <div
+                      key={setor.id}
+                      className="rounded-xl border-2 p-4 transition-colors"
+                      style={getSetorStyle(setor.nome)}
+                    >
+                      {/* Sector header */}
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="inline-flex rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wide"
+                          style={getSetorBadgeStyle(setor.nome)}
+                        >
+                          {setor.nome}
                         </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                        <span className="text-xs text-muted-foreground">
+                          {items.length} {items.length === 1 ? "turno" : "turnos"}
+                        </span>
+                      </div>
+
+                      {/* Turnos within sector */}
+                      <div className="mt-3 flex flex-col gap-2">
+                        {items.map((item) => (
+                          <div
+                            key={`${item.userId}-${item.turno_nome}`}
+                            className="flex items-center justify-between rounded-lg border border-border/50 bg-card/80 px-3 py-2"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="truncate text-sm font-medium text-foreground">
+                                {item.nome}
+                              </p>
+                              <p className="text-xs text-muted-foreground">{item.matricula}</p>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-2">
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Clock className="h-3 w-3" />
+                                <span>{item.turno_nome}</span>
+                                {item.turno_inicio && item.turno_fim && (
+                                  <span className="text-[10px]">
+                                    ({item.turno_inicio.slice(0, 5)}-{item.turno_fim.slice(0, 5)})
+                                  </span>
+                                )}
+                              </div>
+                              {item.tipo === "provisória" && (
+                                <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                                  Prov.
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+            </div>
+          )}
         </div>
       )}
     </div>

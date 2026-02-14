@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { auth } from "@/lib/auth"
 import { getCurrentLojaId } from "@/lib/actions/auth"
 import { revalidatePath } from "next/cache"
-import type { Profile, Shift, FixedSchedule } from "@/lib/types"
+import type { Profile, Shift, FixedSchedule, Setor } from "@/lib/types"
 
 export async function getAllProfiles(): Promise<Profile[]> {
   const supabase = await createClient()
@@ -127,20 +127,18 @@ export async function updateAnnouncement(
   return {}
 }
 
-export async function getDistinctSectors(): Promise<string[]> {
+export async function getSetores(): Promise<Setor[]> {
   const supabase = await createClient()
-  const lojaId = await getCurrentLojaId()
+  const { data } = await supabase
+    .from("setores")
+    .select("*")
+    .eq("ativo", true)
+    .order("nome", { ascending: true })
 
-  let query = supabase
-    .from("profiles")
-    .select("setor_base")
-    .not("setor_base", "is", null)
+  return (data as Setor[]) ?? []
+}
 
-  if (lojaId) query = query.eq("loja_id", lojaId)
-
-  const { data } = await query
-
-  if (!data) return []
-  const sectors = new Set(data.map((d) => d.setor_base as string))
-  return Array.from(sectors).sort()
+export async function getDistinctSectors(): Promise<string[]> {
+  const setores = await getSetores()
+  return setores.map((s) => s.nome)
 }

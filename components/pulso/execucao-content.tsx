@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition, useRef, useCallback } from "react"
-import type { Task, Profile, TaskSubmission } from "@/lib/types"
+import type { Task, Profile, TaskSubmission, Setor } from "@/lib/types"
 import {
   createTask,
   submitTask,
@@ -90,6 +90,7 @@ const statusConfig = {
 interface ExecucaoContentProps {
   initialTasks: Task[]
   profiles: Profile[]
+  setores: Setor[]
   currentProfile: Profile | null
   isLideranca: boolean
 }
@@ -97,6 +98,7 @@ interface ExecucaoContentProps {
 export function ExecucaoContent({
   initialTasks,
   profiles,
+  setores,
   currentProfile,
   isLideranca,
 }: ExecucaoContentProps) {
@@ -118,9 +120,7 @@ export function ExecucaoContent({
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
-  const sectors = Array.from(
-    new Set(profiles.map((p) => p.setor_base).filter(Boolean))
-  ) as string[]
+  const sectors = setores.map((s) => s.nome)
 
   const filteredTasks = initialTasks.filter((task) => {
     const matchesSearch =
@@ -263,8 +263,8 @@ export function ExecucaoContent({
                     className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
                   >
                     <option value="">Selecione</option>
-                    {sectors.map((s) => (
-                      <option key={s} value={s}>{s}</option>
+                    {setores.map((s) => (
+                      <option key={s.id} value={s.nome}>{s.nome}</option>
                     ))}
                   </select>
                 </div>
@@ -324,8 +324,8 @@ export function ExecucaoContent({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
-            {sectors.map((s) => (
-              <SelectItem key={s} value={s}>{s}</SelectItem>
+            {setores.map((s) => (
+              <SelectItem key={s.id} value={s.nome}>{s.nome}</SelectItem>
             ))}
           </SelectContent>
         </Select>
