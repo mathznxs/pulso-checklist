@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition, useRef, useCallback } from "react"
-import type { Task, Profile, TaskSubmission } from "@/lib/types"
+import type { Task, Profile, TaskSubmission, Setor } from "@/lib/types"
 import {
   createTask,
   submitTask,
@@ -90,6 +90,7 @@ const statusConfig = {
 interface ExecucaoContentProps {
   initialTasks: Task[]
   profiles: Profile[]
+  setores: Setor[]
   currentProfile: Profile | null
   isLideranca: boolean
 }
@@ -97,6 +98,7 @@ interface ExecucaoContentProps {
 export function ExecucaoContent({
   initialTasks,
   profiles,
+  setores,
   currentProfile,
   isLideranca,
 }: ExecucaoContentProps) {
@@ -118,9 +120,7 @@ export function ExecucaoContent({
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
-  const sectors = Array.from(
-    new Set(profiles.map((p) => p.setor_base).filter(Boolean))
-  ) as string[]
+  const sectors = setores.map((s) => s.nome)
 
   const filteredTasks = initialTasks.filter((task) => {
     const matchesSearch =

@@ -14,15 +14,8 @@ import {
 } from "@/components/ui/select"
 import { AlertCircle, Loader2 } from "lucide-react"
 import { completeOnboarding, getLojas } from "@/lib/actions/onboarding"
-
-const SETORES = [
-  "Calçados",
-  "Vestuário",
-  "Acessórios",
-  "Estoque",
-  "Caixa",
-  "Geral",
-]
+import { getActiveSetores } from "@/lib/actions/setores"
+import type { Setor } from "@/lib/types"
 
 export default function OnboardingPage() {
   const [matricula, setMatricula] = useState("")
@@ -33,12 +26,14 @@ export default function OnboardingPage() {
   const [lojas, setLojas] = useState<
     { id: string; numero_loja: string; nome: string }[]
   >([])
+  const [setoresData, setSetoresData] = useState<Setor[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
     getLojas().then(setLojas)
+    getActiveSetores().then(setSetoresData)
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -175,9 +170,9 @@ export default function OnboardingPage() {
                 <SelectValue placeholder="Selecione um setor" />
               </SelectTrigger>
               <SelectContent>
-                {SETORES.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
+                {setoresData.map((s) => (
+                  <SelectItem key={s.id} value={s.nome}>
+                    {s.nome}
                   </SelectItem>
                 ))}
               </SelectContent>

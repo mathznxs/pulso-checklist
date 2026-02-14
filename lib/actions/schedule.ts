@@ -2,8 +2,9 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { auth } from "@/lib/auth"
+import { getCurrentLojaId } from "@/lib/actions/auth"
 import { revalidatePath } from "next/cache"
-import type { Shift, ScaleDay } from "@/lib/types"
+import type { Shift, ScaleDay, Setor, Profile, Escala } from "@/lib/types"
 import { DIAS_LABELS } from "@/lib/utils/schedule.utils"
 
 export interface TodaySchedule {
@@ -347,4 +348,228 @@ export async function getTodayAllSchedules(): Promise<
   }
 
   return result.sort((a, b) => a.setor.localeCompare(b.setor))
+}
+
+// ==========================================
+// Nova API: Escala organizada por setor
+// ==========================================
+
+export interface EscalaTurnoEntry {
+  id: string
+  turno: Shift
+  funcionario: Profile
+  tipo: "fixa" | "provisoria"
+}
+
+export interface EscalaSetorGroup {
+  setor: Setor
+  turnos: EscalaTurnoEntry[]
+}
+
+/** Retorna escala para uma data agrupada por setor. */
+export async function getEscalaByDate(
+  data: string
+): Promise<EscalaSetorGroup[]> {
+  const supabase = await createClient()
+  const lojaId = await getCurrentLojaId()
+  const dateObj = new Date(data + "T12:00:00")
+  const dayOfWeek = dateObj.getDay()
+
+  // Buscar provisorias para a data
+  let provQuery = supabase
+    .from("escala")
+    .select(
+      "id, setor_id, turno_id, funcionario_id, tipo, setor:setores(*), turno:shifts(*), funcionario:profiles(*)"
+    )
+    .eq("tipo", "provisoria")
+    .eq("data", data)
+
+  if (lojaId) provQuery = provQuery.eq("loja_id", lojaId)
+  const { data: provisorias } = await provQuery
+
+  // Buscar fixas para o dia_semana correspondente
+  let fixaQuery = supabase
+    .from("escala")
+    .select(
+      "id, setor_id, turno_id, funcionario_id, tipo, setor:setores(*), turno:shifts(*), funcionario:profiles(*)"
+    )
+    .eq("tipo", "fixa")
+    .eq("dia_semana", dayOfWeek)
+
+  if (lojaId) fixaQuery = fixaQuery.eq("loja_id", lojaId)
+  const { data: fixas } = await fixaQuery
+
+  // Provisoria sobrepoem fixa (mesmos setor_id + turno_id)
+  const provKeys = new Set<string>()
+  const allEntries: Escala[] = []
+
+  if (provisorias) {
+    for (const p of provisorias) {
+      provKeys.add(`${p.setor_id}-${p.turno_id}`)
+      allEntries.push(p as unknown as Escala)
+    }
+  }
+  if (fixas) {
+    for (const f of fixas) {
+      const key = `${f.setor_id}-${f.turno_id}`
+      if (!provKeys.has(key)) {
+        allEntries.push(f as unknown as Escala)
+      }
+    }
+  }
+
+  // Agrupar por setor
+  const setorMap = new Map<string, EscalaSetorGroup>()
+  for (const entry of allEntries) {
+    if (!entry.setor || !entry.turno || !entry.funcionario) continue
+    const sid = entry.setor_id
+    if (!setorMap.has(sid)) {
+      setorMap.set(sid, { setor: entry.setor, turnos: [] })
+    }
+    setorMap.get(sid)!.turnos.push({
+      id: entry.id,
+      turno: entry.turno,
+      funcionario: entry.funcionario,
+      tipo: entry.tipo,
+    })
+  }
+
+  // Ordenar turnos por hora_inicio dentro de cada setor
+  const groups = Array.from(setorMap.values())
+  for (const g of groups) {
+    g.turnos.sort((a, b) => a.turno.hora_inicio.localeCompare(b.turno.hora_inicio))
+  }
+
+  return groups.sort((a, b) => a.setor.nome.localeCompare(b.setor.nome))
+}
+
+/** Retorna toda a escala fixa agrupada por setor. */
+export async function getEscalaFixaSemanal(): Promise<
+  { setor: Setor; dias: { diaSemana: number; turno: Shift; funcionario: Profile; id: string }[] }[]
+> {
+  const supabase = await createClient()
+  const lojaId = await getCurrentLojaId()
+
+  let query = supabase
+    .from("escala")
+    .select(
+      "id, setor_id, turno_id, funcionario_id, dia_semana, setor:setores(*), turno:shifts(*), funcionario:profiles(*)"
+    )
+    .eq("tipo", "fixa")
+
+  if (lojaId) query = query.eq("loja_id", lojaId)
+  const { data } = await query
+
+  const setorMap = new Map<
+    string,
+    {
+      setor: Setor
+      dias: { diaSemana: number; turno: Shift; funcionario: Profile; id: string }[]
+    }
+  >()
+
+  if (data) {
+    for (const row of data) {
+      const entry = row as unknown as Escala
+      if (!entry.setor || !entry.turno || !entry.funcionario || entry.dia_semana === null) continue
+      const sid = entry.setor_id
+      if (!setorMap.has(sid)) {
+        setorMap.set(sid, { setor: entry.setor, dias: [] })
+      }
+      setorMap.get(sid)!.dias.push({
+        diaSemana: entry.dia_semana,
+        turno: entry.turno,
+        funcionario: entry.funcionario,
+        id: entry.id,
+      })
+    }
+  }
+
+  return Array.from(setorMap.values()).sort((a, b) =>
+    a.setor.nome.localeCompare(b.setor.nome)
+  )
+}
+
+/** Criar um registro na tabela escala. */
+export async function createEscalaEntry(params: {
+  setorId: string
+  turnoId: string
+  funcionarioId: string
+  tipo: "fixa" | "provisoria"
+  data?: string | null
+  diaSemana?: number | null
+}): Promise<{ error?: string }> {
+  const session = await auth()
+  if (!session?.user?.profileId) return { error: "Nao autenticado" }
+
+  const supabase = await createClient()
+  const lojaId = await getCurrentLojaId()
+
+  // Verificar se funcionario ja esta em outro setor no mesmo turno/data
+  if (params.tipo === "provisoria" && params.data) {
+    const { data: conflict } = await supabase
+      .from("escala")
+      .select("id")
+      .eq("funcionario_id", params.funcionarioId)
+      .eq("turno_id", params.turnoId)
+      .eq("tipo", "provisoria")
+      .eq("data", params.data)
+      .neq("setor_id", params.setorId)
+      .limit(1)
+
+    if (conflict && conflict.length > 0) {
+      return { error: "Funcionario ja esta escalado em outro setor neste turno/data." }
+    }
+  }
+
+  if (params.tipo === "fixa" && params.diaSemana !== null && params.diaSemana !== undefined) {
+    const { data: conflict } = await supabase
+      .from("escala")
+      .select("id")
+      .eq("funcionario_id", params.funcionarioId)
+      .eq("turno_id", params.turnoId)
+      .eq("tipo", "fixa")
+      .eq("dia_semana", params.diaSemana)
+      .neq("setor_id", params.setorId)
+      .limit(1)
+
+    if (conflict && conflict.length > 0) {
+      return { error: "Funcionario ja esta escalado em outro setor neste turno/dia." }
+    }
+  }
+
+  const { error } = await supabase.from("escala").upsert(
+    {
+      setor_id: params.setorId,
+      turno_id: params.turnoId,
+      funcionario_id: params.funcionarioId,
+      tipo: params.tipo,
+      data: params.tipo === "provisoria" ? params.data : null,
+      dia_semana: params.tipo === "fixa" ? params.diaSemana : null,
+      loja_id: lojaId,
+    },
+    {
+      onConflict:
+        params.tipo === "provisoria"
+          ? "setor_id,turno_id,data"
+          : "setor_id,turno_id,dia_semana",
+    }
+  )
+
+  if (error) return { error: error.message }
+  revalidatePath("/escala")
+  revalidatePath("/admin")
+  return {}
+}
+
+/** Remove um registro da escala. */
+export async function deleteEscalaEntry(
+  id: string
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { error } = await supabase.from("escala").delete().eq("id", id)
+  if (error) return { error: error.message }
+  revalidatePath("/escala")
+  revalidatePath("/admin")
+  return {}
 }

@@ -2,12 +2,17 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { Profile, Shift, FixedSchedule } from "@/lib/types";
+import type { Profile, Shift, FixedSchedule, Setor } from "@/lib/types";
 import {
   createShift,
   createFixedSchedule,
   updateAnnouncement,
 } from "@/lib/actions/admin";
+import {
+  createEscalaEntry,
+  deleteEscalaEntry,
+} from "@/lib/actions/schedule";
+import type { getEscalaFixaSemanal } from "@/lib/actions/schedule";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,19 +51,6 @@ const cargoConfig: Record<string, { label: string; bgClass: string }> = {
   gerente: { label: "Gerente", bgClass: "bg-emerald-50 text-emerald-700" },
 };
 
-const SETORES = [
-  "Masculino",
-  "Feminino",
-  "Futebol",
-  "Ilha",
-  "Infantil",
-  "Anfitrião",
-  "Caixa",
-  "OMS",
-  "Provador",
-  "Estoque",
-];
-
 const DIAS_SEMANA = [
   { value: 0, label: "Dom" },
   { value: 1, label: "Seg" },
@@ -69,11 +61,14 @@ const DIAS_SEMANA = [
   { value: 6, label: "Sab" },
 ];
 
+type EscalaFixaSemanal = Awaited<ReturnType<typeof getEscalaFixaSemanal>>;
+
 interface AdminContentProps {
   profiles: Profile[];
   shifts: Shift[];
   schedules: FixedSchedule[];
-  sectors: string[];
+  setores: Setor[];
+  escalaFixa: EscalaFixaSemanal;
   currentProfile: Profile;
 }
 
@@ -81,7 +76,8 @@ export function AdminContent({
   profiles,
   shifts,
   schedules,
-  sectors,
+  setores,
+  escalaFixa,
   currentProfile,
 }: AdminContentProps) {
   const [activeTab, setActiveTab] = useState<
@@ -211,6 +207,60 @@ export function AdminContent({
     });
   }
 
+  // --- Create Escala Entry ---
+  const [showCreateEscala, setShowCreateEscala] = useState(false);
+  const [escalaError, setEscalaError] = useState<string | null>(null);
+
+  async function handleCreateEscala(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setEscalaError(null);
+    const fd = new FormData(e.currentTarget);
+    const tipo = fd.get("tipo") as "fixa" | "provisoria";
+    const dias = DIAS_SEMANA.filter(
+      (d) => fd.get(`escala_dia_${d.value}`) === "on"
+    ).map((d) => d.value);
+
+    startTransition(async () => {
+      if (tipo === "fixa") {
+        // Create one entry per day
+        for (const dia of dias) {
+          const result = await createEscalaEntry({
+            setorId: fd.get("setor_id") as string,
+            turnoId: fd.get("turno_id") as string,
+            funcionarioId: fd.get("funcionario_id") as string,
+            tipo: "fixa",
+            diaSemana: dia,
+          });
+          if (result.error) {
+            setEscalaError(result.error);
+            return;
+          }
+        }
+      } else {
+        const result = await createEscalaEntry({
+          setorId: fd.get("setor_id") as string,
+          turnoId: fd.get("turno_id") as string,
+          funcionarioId: fd.get("funcionario_id") as string,
+          tipo: "provisoria",
+          data: fd.get("data") as string,
+        });
+        if (result.error) {
+          setEscalaError(result.error);
+          return;
+        }
+      }
+      setShowCreateEscala(false);
+      router.refresh();
+    });
+  }
+
+  async function handleDeleteEscala(id: string) {
+    startTransition(async () => {
+      await deleteEscalaEntry(id);
+      router.refresh();
+    });
+  }
+
   // --- Announcement ---
   async function handleAnnouncement(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -319,9 +369,9 @@ export function AdminContent({
                       className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
                     >
                       <option value="">Nenhum</option>
-                      {SETORES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
+                      {setores.map((s) => (
+                        <option key={s.id} value={s.nome}>
+                          {s.nome}
                         </option>
                       ))}
                     </select>
@@ -576,9 +626,9 @@ export function AdminContent({
                       className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
                     >
                       <option value="">Nenhum</option>
-                      {SETORES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
+                      {setores.map((s) => (
+                        <option key={s.id} value={s.nome}>
+                          {s.nome}
                         </option>
                       ))}
                     </select>
@@ -601,206 +651,105 @@ export function AdminContent({
 
       {/* === ESCALAS TAB === */}
       {activeTab === "escalas" && (
-        <div>
-          <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-sm font-semibold text-foreground">
-              Escala Fixa
+              Escala Fixa por Setor
             </h3>
-            <Dialog
-              open={showCreateSchedule}
-              onOpenChange={setShowCreateSchedule}
-            >
+            <Dialog open={showCreateEscala} onOpenChange={setShowCreateEscala}>
               <DialogTrigger asChild>
                 <Button size="sm">
                   <Plus className="mr-1.5 h-3.5 w-3.5" />
-                  Criar Escala Fixa
+                  Nova Escala
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Criar Escala Fixa</DialogTitle>
+                  <DialogTitle>Criar Escala</DialogTitle>
                 </DialogHeader>
-                <form
-                  onSubmit={handleCreateSchedule}
-                  className="flex flex-col gap-4"
-                >
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="cs-user">Funcionário</Label>
-                    <select
-                      id="cs-user"
-                      name="user_id"
-                      required
-                      className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
-                    >
-                      <option value="">Selecione</option>
-                      {profiles
-                        .filter((p) => p.ativo)
-                        .map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.nome} ({p.matricula})
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="cs-setor">Setor</Label>
-                    <select
-                      id="cs-setor"
-                      name="setor"
-                      required
-                      className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
-                    >
-                      <option value="">Selecione</option>
-                      {SETORES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="cs-turno">Turno</Label>
-                    <select
-                      id="cs-turno"
-                      name="turno_id"
-                      required
-                      className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
-                    >
-                      <option value="">Selecione</option>
-                      {shifts.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.nome} ({s.hora_inicio} - {s.hora_fim})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label>Dias da Semana</Label>
-                    <div className="flex flex-wrap gap-3">
-                      {DIAS_SEMANA.map((d) => (
-                        <label
-                          key={d.value}
-                          className="flex items-center gap-1.5 text-sm"
-                        >
-                          <input
-                            type="checkbox"
-                            name={`dia_${d.value}`}
-                            className="h-4 w-4 rounded border-input"
-                          />
-                          {d.label}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <Button type="submit" disabled={isPending}>
-                    {isPending && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    Criar Escala
-                  </Button>
-                </form>
+                <EscalaForm
+                  setores={setores}
+                  shifts={shifts}
+                  profiles={profiles}
+                  isPending={isPending}
+                  error={escalaError}
+                  onSubmit={handleCreateEscala}
+                />
               </DialogContent>
             </Dialog>
           </div>
 
-          {/* Mobile: Card list */}
-          <div className="mt-4 flex flex-col gap-3 sm:hidden">
-            {schedules.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                Nenhuma escala fixa cadastrada
-              </p>
-            ) : (
-              schedules.map((s) => (
+          {/* Setor cards with weekly schedule */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {setores.map((setor) => {
+              const grupo = escalaFixa.find((g) => g.setor.id === setor.id);
+              return (
                 <div
-                  key={s.id}
-                  className="rounded-lg border border-border bg-card p-3"
+                  key={setor.id}
+                  className="flex flex-col overflow-hidden rounded-xl border border-border bg-card"
                 >
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-foreground">
-                      {s.profile?.nome ?? "N/A"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {s.shift?.nome ?? "N/A"}
-                    </p>
+                  <div
+                    className="flex items-center gap-2 px-4 py-3"
+                    style={{ backgroundColor: setor.cor + "22" }}
+                  >
+                    <div
+                      className="h-3 w-3 rounded-full"
+                      style={{ backgroundColor: setor.cor }}
+                    />
+                    <h4 className="text-sm font-bold text-foreground">
+                      {setor.nome}
+                    </h4>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {s.setor}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {s.dias_semana.map((d) => (
-                      <span
-                        key={d}
-                        className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
-                      >
-                        {DIAS_SEMANA.find((ds) => ds.value === d)?.label ?? d}
-                      </span>
-                    ))}
+                  <div className="flex flex-col divide-y divide-border">
+                    {(!grupo || grupo.dias.length === 0) ? (
+                      <div className="px-4 py-6 text-center">
+                        <p className="text-xs text-muted-foreground">
+                          Sem escala fixa
+                        </p>
+                      </div>
+                    ) : (
+                      DIAS_SEMANA.map((dia) => {
+                        const entries = grupo.dias.filter(
+                          (d) => d.diaSemana === dia.value
+                        );
+                        if (entries.length === 0) return null;
+                        return (
+                          <div key={dia.value} className="px-4 py-2">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                              {dia.label}
+                            </p>
+                            {entries.map((entry) => (
+                              <div
+                                key={entry.id}
+                                className="mt-1 flex items-center justify-between"
+                              >
+                                <div>
+                                  <span className="text-xs font-medium text-foreground">
+                                    {entry.funcionario.nome}
+                                  </span>
+                                  <span className="ml-1.5 text-[10px] text-muted-foreground">
+                                    {entry.turno.nome}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteEscala(entry.id)}
+                                  disabled={isPending}
+                                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                                  aria-label={`Remover ${entry.funcionario.nome}`}
+                                >
+                                  <Ban className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
                 </div>
-              ))
-            )}
-          </div>
-
-          {/* Desktop: Table */}
-          <div className="mt-4 hidden overflow-x-auto rounded-lg border border-border sm:block">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/50">
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Funcionario
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Setor
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Turno
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Dias
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-card">
-                {schedules.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-4 py-8 text-center text-muted-foreground"
-                    >
-                      Nenhuma escala fixa cadastrada
-                    </td>
-                  </tr>
-                ) : (
-                  schedules.map((s) => (
-                    <tr
-                      key={s.id}
-                      className="border-b border-border transition-colors last:border-b-0 hover:bg-muted/30"
-                    >
-                      <td className="px-4 py-3 font-medium text-foreground">
-                        {s.profile?.nome ?? "N/A"}
-                      </td>
-                      <td className="px-4 py-3 text-foreground">{s.setor}</td>
-                      <td className="px-4 py-3 text-foreground">
-                        {s.shift?.nome ?? "N/A"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {s.dias_semana.map((d) => (
-                            <span
-                              key={d}
-                              className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary"
-                            >
-                              {DIAS_SEMANA.find((ds) => ds.value === d)
-                                ?.label ?? d}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+              );
+            })}
           </div>
         </div>
       )}
@@ -985,5 +934,147 @@ export function AdminContent({
         </div>
       )}
     </div>
+  );
+}
+
+// ==========================================
+// EscalaForm component
+// ==========================================
+
+const DIAS_FORM = [
+  { value: 0, label: "Dom" },
+  { value: 1, label: "Seg" },
+  { value: 2, label: "Ter" },
+  { value: 3, label: "Qua" },
+  { value: 4, label: "Qui" },
+  { value: 5, label: "Sex" },
+  { value: 6, label: "Sab" },
+];
+
+function EscalaForm({
+  setores,
+  shifts,
+  profiles,
+  isPending,
+  error,
+  onSubmit,
+}: {
+  setores: Setor[];
+  shifts: Shift[];
+  profiles: Profile[];
+  isPending: boolean;
+  error: string | null;
+  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+}) {
+  const [tipo, setTipo] = useState<"fixa" | "provisoria">("fixa");
+
+  return (
+    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="ce-tipo">Tipo</Label>
+        <select
+          id="ce-tipo"
+          name="tipo"
+          value={tipo}
+          onChange={(e) => setTipo(e.target.value as "fixa" | "provisoria")}
+          className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
+        >
+          <option value="fixa">Fixa (semanal)</option>
+          <option value="provisoria">Provisoria (data especifica)</option>
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="ce-setor">Setor</Label>
+        <select
+          id="ce-setor"
+          name="setor_id"
+          required
+          className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
+        >
+          <option value="">Selecione</option>
+          {setores.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.nome}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="ce-turno">Turno</Label>
+        <select
+          id="ce-turno"
+          name="turno_id"
+          required
+          className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
+        >
+          <option value="">Selecione</option>
+          {shifts.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.nome} ({s.hora_inicio.slice(0, 5)} - {s.hora_fim.slice(0, 5)})
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="ce-func">Funcionario</Label>
+        <select
+          id="ce-func"
+          name="funcionario_id"
+          required
+          className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
+        >
+          <option value="">Selecione</option>
+          {profiles
+            .filter((p) => p.ativo)
+            .map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nome} ({p.matricula})
+              </option>
+            ))}
+        </select>
+      </div>
+
+      {tipo === "fixa" ? (
+        <div className="flex flex-col gap-2">
+          <Label>Dias da Semana</Label>
+          <div className="flex flex-wrap gap-3">
+            {DIAS_FORM.map((d) => (
+              <label
+                key={d.value}
+                className="flex items-center gap-1.5 text-sm"
+              >
+                <input
+                  type="checkbox"
+                  name={`escala_dia_${d.value}`}
+                  className="h-4 w-4 rounded border-input"
+                />
+                {d.label}
+              </label>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="ce-data">Data</Label>
+          <Input
+            id="ce-data"
+            name="data"
+            type="date"
+            required
+            defaultValue={new Date().toISOString().split("T")[0]}
+          />
+        </div>
+      )}
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      <Button type="submit" disabled={isPending}>
+        {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        Criar Escala
+      </Button>
+    </form>
   );
 }

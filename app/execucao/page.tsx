@@ -1,9 +1,10 @@
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
 
 import { Navbar } from "@/components/pulso/navbar"
 import { getProfileForSession } from "@/lib/actions/auth"
 import { getTasksForRole } from "@/lib/actions/tasks"
 import { getAllProfiles } from "@/lib/actions/admin"
+import { getActiveSetores } from "@/lib/actions/setores"
 import { ExecucaoContent } from "@/components/pulso/execucao-content"
 import { redirect } from "next/navigation"
 
@@ -13,13 +14,13 @@ export default async function ExecucaoPage() {
 
   const isLideranca = profile.cargo === "gerente"
 
-  const [tasks, profiles] = await Promise.all([
+  const [tasks, profiles, setores] = await Promise.all([
     getTasksForRole({
       userId: profile.id,
       isLideranca,
-      // Sem filtro de data: liderança vê todas; assistente vê todas atribuídas a ele
     }),
     getAllProfiles(),
+    getActiveSetores(),
   ])
 
   return (
@@ -29,6 +30,7 @@ export default async function ExecucaoPage() {
         <ExecucaoContent
           initialTasks={tasks}
           profiles={profiles}
+          setores={setores}
           currentProfile={profile}
           isLideranca={isLideranca}
         />

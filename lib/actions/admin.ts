@@ -129,18 +129,13 @@ export async function updateAnnouncement(
 
 export async function getDistinctSectors(): Promise<string[]> {
   const supabase = await createClient()
-  const lojaId = await getCurrentLojaId()
 
-  let query = supabase
-    .from("profiles")
-    .select("setor_base")
-    .not("setor_base", "is", null)
-
-  if (lojaId) query = query.eq("loja_id", lojaId)
-
-  const { data } = await query
+  const { data } = await supabase
+    .from("setores")
+    .select("nome")
+    .eq("ativo", true)
+    .order("nome", { ascending: true })
 
   if (!data) return []
-  const sectors = new Set(data.map((d) => d.setor_base as string))
-  return Array.from(sectors).sort()
+  return data.map((d) => d.nome)
 }

@@ -148,6 +148,30 @@ export interface ScaleDay {
   shift?: Shift
 }
 
+export interface Setor {
+  id: string
+  nome: string
+  cor: string
+  ativo: boolean
+  criado_em: string
+}
+
+export interface Escala {
+  id: string
+  setor_id: string
+  turno_id: string
+  funcionario_id: string
+  data: string | null
+  dia_semana: number | null
+  tipo: "fixa" | "provisoria"
+  loja_id: string | null
+  criado_em: string
+  // Joined
+  setor?: Setor
+  turno?: Shift
+  funcionario?: Profile
+}
+
 export interface DashboardStats {
   concluidas: number
   pendentes: number

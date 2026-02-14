@@ -1,20 +1,28 @@
-export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
+export const dynamic = "force-dynamic"
+export const runtime = "nodejs"
 
 import { Navbar } from "@/components/pulso/navbar"
 import { getProfileForSession } from "@/lib/actions/auth"
-import { getAllProfiles, getShifts, getFixedSchedules, getDistinctSectors } from "@/lib/actions/admin"
+import {
+  getAllProfiles,
+  getShifts,
+  getFixedSchedules,
+} from "@/lib/actions/admin"
+import { getActiveSetores } from "@/lib/actions/setores"
+import { getEscalaFixaSemanal } from "@/lib/actions/schedule"
 import { AdminContent } from "@/components/pulso/admin-content"
 import { redirect } from "next/navigation"
 
 export default async function AdminPage() {
-  const [profile, profiles, shifts, schedules, sectors] = await Promise.all([
-    getProfileForSession(),
-    getAllProfiles(),
-    getShifts(),
-    getFixedSchedules(),
-    getDistinctSectors(),
-  ])
+  const [profile, profiles, shifts, schedules, setores, escalaFixa] =
+    await Promise.all([
+      getProfileForSession(),
+      getAllProfiles(),
+      getShifts(),
+      getFixedSchedules(),
+      getActiveSetores(),
+      getEscalaFixaSemanal(),
+    ])
 
   if (!profile) redirect("/auth/login")
 
@@ -28,7 +36,8 @@ export default async function AdminPage() {
           profiles={profiles}
           shifts={shifts}
           schedules={schedules}
-          sectors={sectors}
+          setores={setores}
+          escalaFixa={escalaFixa}
           currentProfile={profile}
         />
       </main>
