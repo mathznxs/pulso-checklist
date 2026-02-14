@@ -2,6 +2,13 @@ import NextAuth from "next-auth"
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id"
 import { createServiceClient } from "@/lib/supabase/service"
 
+/**
+ * Azure AD Redirect URIs (configurar exatamente no portal Azure):
+ * - Local:   http://localhost:3000/api/auth/callback/microsoft-entra-id
+ * - Vercel:  https://SEU-DOMINIO.vercel.app/api/auth/callback/microsoft-entra-id
+ * Provider ID interno: microsoft-entra-id (não alterar)
+ */
+
 declare module "next-auth" {
   interface Session {
     user: {
@@ -28,6 +35,8 @@ declare module "next-auth" {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  debug: process.env.NEXTAUTH_DEBUG === "true",
+  trustHost: true,
   providers: [
     MicrosoftEntraID({
       clientId: process.env.AUTH_MICROSOFT_ENTRA_ID_ID!,

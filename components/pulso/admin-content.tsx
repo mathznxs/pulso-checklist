@@ -270,7 +270,7 @@ export function AdminContent({
               <DialogTrigger asChild>
                 <Button className="w-full sm:w-auto">
                   <UserPlus className="mr-2 h-4 w-4" />
-                  Novo Usuario
+                  Novo Usuário
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -309,10 +309,11 @@ export function AdminContent({
                     >
                       <option value="assistente">Assistente</option>
                       <option value="gerente">Gerente</option>
+                      <option value="gerente">Supervisão</option>
                     </select>
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="cu-setor">Setor Base</Label>
+                    <Label htmlFor="cu-setor">Setor</Label>
                     <select
                       id="cu-setor"
                       name="setor_base"
@@ -344,7 +345,7 @@ export function AdminContent({
           <div className="mt-4 flex flex-col gap-3 sm:hidden">
             {filteredProfiles.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
-                Nenhum usuario encontrado
+                Nenhum usuário encontrado
               </p>
             ) : (
               filteredProfiles.map((user) => {
@@ -420,7 +421,7 @@ export function AdminContent({
                     Nome
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Matricula
+                    Matrícula
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Cargo
@@ -432,7 +433,7 @@ export function AdminContent({
                     Status
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    <span className="sr-only">Acoes</span>
+                    <span className="sr-only">Ações</span>
                   </th>
                 </tr>
               </thead>
@@ -443,7 +444,7 @@ export function AdminContent({
                       colSpan={6}
                       className="px-4 py-8 text-center text-muted-foreground"
                     >
-                      Nenhum usuario encontrado
+                      Nenhum usuário encontrado
                     </td>
                   </tr>
                 ) : (

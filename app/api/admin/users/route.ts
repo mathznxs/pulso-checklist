@@ -15,7 +15,7 @@ async function requireLideranca() {
 export async function POST(request: Request) {
   const caller = await requireLideranca()
   if (!caller) {
-    return NextResponse.json({ error: "Sem permissao" }, { status: 403 })
+    return NextResponse.json({ error: "Sem permissão" }, { status: 403 })
   }
 
   const body = await request.json()
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 
   if (existing) {
     return NextResponse.json(
-      { error: "Matricula ja cadastrada no sistema" },
+      { error: "Matrícula já cadastrada no sistema" },
       { status: 409 }
     )
   }
@@ -69,14 +69,14 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   const caller = await requireLideranca()
   if (!caller) {
-    return NextResponse.json({ error: "Sem permissao" }, { status: 403 })
+    return NextResponse.json({ error: "Sem permissão" }, { status: 403 })
   }
 
   const body = await request.json()
   const { userId, nome, cargo, setor_base, ativo } = body
 
   if (!userId) {
-    return NextResponse.json({ error: "userId obrigatorio" }, { status: 400 })
+    return NextResponse.json({ error: "userId obrigatório" }, { status: 400 })
   }
 
   const supabase = createServiceClient()

@@ -16,11 +16,14 @@ import { AlertCircle, Loader2 } from "lucide-react"
 import { completeOnboarding, getLojas } from "@/lib/actions/onboarding"
 
 const SETORES = [
-  "Calçados",
-  "Vestuário",
-  "Acessórios",
-  "Estoque",
+  "Masculino",
+  "Feminino",
+  "Anfitrião",
+  "Categorias",
+  "Futebol",
+  "OMS",
   "Caixa",
+  "Provador",
   "Geral",
 ]
 
@@ -124,7 +127,7 @@ export default function OnboardingPage() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="matricula">Matricula</Label>
+            <Label htmlFor="matricula">Matrícula</Label>
             <Input
               id="matricula"
               type="text"

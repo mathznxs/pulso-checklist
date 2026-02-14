@@ -34,7 +34,7 @@ export default function LoginPage() {
             </span>
           </div>
           <p className="text-sm text-muted-foreground">
-            Sistema de Execucao Operacional
+            Sistema de Execução Operacional
           </p>
         </div>
 
