@@ -1,4 +1,4 @@
-export type Cargo = "assistente" | "supervisão" | "gerente"
+export type Cargo = "assistente" | "gerente"
 
 export type TaskStatus =
   | "pendente"
@@ -18,13 +18,23 @@ export type EventType =
 
 export type OperationalStatus = "crítico" | "atenção" | "normal" | "ótimo"
 
+export interface Loja {
+  id: string
+  numero_loja: string
+  nome: string
+  ativo: boolean
+  criado_em: string
+}
+
 export interface Profile {
   id: string
+  microsoft_id: string | null
   matricula: string
   nome: string
-  cpf: string
   cargo: Cargo
   setor_base: string | null
+  loja_id: string | null
+  onboarding_completo: boolean
   ativo: boolean
   criado_em: string
 }
@@ -39,6 +49,7 @@ export interface Task {
   setor: string | null
   criado_por: string
   atribuido_para: string
+  loja_id: string | null
   criado_em: string
   // Joined fields
   atribuido_profile?: Profile
@@ -64,6 +75,7 @@ export interface CalendarEvent {
   data_inicio: string
   data_fim: string | null
   criado_por: string
+  loja_id: string | null
   criado_em: string
 }
 
@@ -74,6 +86,7 @@ export interface Challenge {
   data_inicio?: string | null
   data_fim?: string | null
   descricao?: string | null
+  loja_id: string | null
   criado_em: string
 }
 
@@ -99,6 +112,7 @@ export interface FixedSchedule {
   setor: string
   turno_id: string
   dias_semana: number[]
+  loja_id: string | null
   profile?: Profile
   shift?: Shift
 }
@@ -108,6 +122,7 @@ export interface Announcement {
   message: string
   ativo: boolean
   criado_por: string | null
+  loja_id: string | null
   criado_em: string
 }
 
@@ -118,6 +133,7 @@ export interface TemporarySchedule {
   data: string
   turno_id: string
   criado_por: string
+  loja_id: string | null
   profile?: Profile
   shift?: Shift
 }

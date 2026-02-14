@@ -1,15 +1,23 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { auth } from "@/lib/auth"
+import { getCurrentLojaId } from "@/lib/actions/auth"
 import { revalidatePath } from "next/cache"
 import type { Profile, Shift, FixedSchedule } from "@/lib/types"
 
 export async function getAllProfiles(): Promise<Profile[]> {
   const supabase = await createClient()
-  const { data } = await supabase
+  const lojaId = await getCurrentLojaId()
+
+  let query = supabase
     .from("profiles")
     .select("*")
     .order("nome", { ascending: true })
+
+  if (lojaId) query = query.eq("loja_id", lojaId)
+
+  const { data } = await query
 
   return (data as Profile[]) ?? []
 }
@@ -55,10 +63,16 @@ export async function createShift(
 
 export async function getFixedSchedules(): Promise<FixedSchedule[]> {
   const supabase = await createClient()
-  const { data } = await supabase
+  const lojaId = await getCurrentLojaId()
+
+  let query = supabase
     .from("fixed_schedule")
     .select("*, profile:profiles(*), shift:shifts(*)")
     .order("setor", { ascending: true })
+
+  if (lojaId) query = query.eq("loja_id", lojaId)
+
+  const { data } = await query
 
   return (data as FixedSchedule[]) ?? []
 }
@@ -67,6 +81,7 @@ export async function createFixedSchedule(
   formData: FormData
 ): Promise<{ error?: string }> {
   const supabase = await createClient()
+  const lojaId = await getCurrentLojaId()
   const diasStr = formData.get("dias_semana") as string
   const dias = diasStr ? diasStr.split(",").map(Number) : []
 
@@ -75,6 +90,7 @@ export async function createFixedSchedule(
     setor: formData.get("setor") as string,
     turno_id: formData.get("turno_id") as string,
     dias_semana: dias,
+    loja_id: lojaId,
   })
   if (error) return { error: error.message }
   revalidatePath("/admin")
@@ -84,19 +100,26 @@ export async function createFixedSchedule(
 export async function updateAnnouncement(
   message: string
 ): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: "Não autenticado" }
+  const session = await auth()
+  if (!session?.user?.profileId) return { error: "Nao autenticado" }
 
-  // Deactivate existing
-  await supabase.from("announcements").update({ ativo: false }).eq("ativo", true)
+  const supabase = await createClient()
+  const lojaId = await getCurrentLojaId()
+
+  // Deactivate existing for this loja
+  let deactivateQuery = supabase
+    .from("announcements")
+    .update({ ativo: false })
+    .eq("ativo", true)
+
+  if (lojaId) deactivateQuery = deactivateQuery.eq("loja_id", lojaId)
+  await deactivateQuery
 
   // Create new
   const { error } = await supabase.from("announcements").insert({
     message,
-    criado_por: user.id,
+    criado_por: session.user.profileId,
+    loja_id: lojaId,
   })
 
   if (error) return { error: error.message }
@@ -106,10 +129,16 @@ export async function updateAnnouncement(
 
 export async function getDistinctSectors(): Promise<string[]> {
   const supabase = await createClient()
-  const { data } = await supabase
+  const lojaId = await getCurrentLojaId()
+
+  let query = supabase
     .from("profiles")
     .select("setor_base")
     .not("setor_base", "is", null)
+
+  if (lojaId) query = query.eq("loja_id", lojaId)
+
+  const { data } = await query
 
   if (!data) return []
   const sectors = new Set(data.map((d) => d.setor_base as string))

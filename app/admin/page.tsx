@@ -18,11 +18,7 @@ export default async function AdminPage() {
 
   if (!profile) redirect("/auth/login")
 
-  const isLideranca =
-    profile.cargo === "supervisão" ||
-    profile.cargo === "gerente"
-
-  if (!isLideranca) redirect("/")
+  if (profile.cargo !== "gerente") redirect("/")
 
   return (
     <div className="min-h-screen bg-background">

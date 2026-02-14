@@ -13,8 +13,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Profile, Cargo } from "@/lib/types"
-import { createClient } from "@/lib/supabase/client"
-import { useRouter } from "next/navigation"
+import { signOut } from "next-auth/react"
 
 const navItems = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard, minCargo: "assistente" as Cargo },
@@ -22,18 +21,16 @@ const navItems = [
   { label: "Calendario", href: "/calendario", icon: Calendar, minCargo: "assistente" as Cargo },
   { label: "Gincanas", href: "/gincanas", icon: Trophy, minCargo: "assistente" as Cargo },
   { label: "Escala", href: "/escala", icon: CalendarClock, minCargo: "assistente" as Cargo },
-  { label: "Admin", href: "/admin", icon: Settings, minCargo: "supervisão" as Cargo },
+  { label: "Admin", href: "/admin", icon: Settings, minCargo: "gerente" as Cargo },
 ]
 
 const cargoOrder: Record<Cargo, number> = {
   assistente: 0,
-  supervisão: 1,
-  gerente: 2,
+  gerente: 1,
 }
 
 const cargoLabels: Record<Cargo, string> = {
   assistente: "Assistente",
-  supervisão: "Supervisão",
   gerente: "Gerente",
 }
 
@@ -43,7 +40,6 @@ interface NavbarProps {
 
 export function Navbar({ profile }: NavbarProps) {
   const pathname = usePathname()
-  const router = useRouter()
   const userCargo = profile?.cargo ?? "assistente"
   const userLevel = cargoOrder[userCargo]
 
@@ -51,11 +47,8 @@ export function Navbar({ profile }: NavbarProps) {
     (item) => cargoOrder[item.minCargo] <= userLevel
   )
 
-  async function handleSignOut() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push("/auth/login")
-    router.refresh()
+  function handleSignOut() {
+    signOut({ callbackUrl: "/auth/login" })
   }
 
   return (

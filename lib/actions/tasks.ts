@@ -1,10 +1,12 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { auth } from "@/lib/auth"
+import { getCurrentLojaId } from "@/lib/actions/auth"
 import { revalidatePath } from "next/cache"
 import type { Task, TaskSubmission } from "@/lib/types"
 
-/** Liderança: todas as tarefas da loja, qualquer data/usuário. Assistente: todas atribuídas a ele, qualquer data. */
+/** Lideranca: todas as tarefas da loja. Assistente: apenas atribuidas a ele. */
 export async function getTasksForRole(options: {
   userId: string
   isLideranca: boolean
@@ -15,6 +17,7 @@ export async function getTasksForRole(options: {
   usuarioId?: string
 }): Promise<Task[]> {
   const supabase = await createClient()
+  const lojaId = await getCurrentLojaId()
   const today = new Date().toISOString().split("T")[0]
 
   let query = supabase
@@ -24,13 +27,13 @@ export async function getTasksForRole(options: {
     )
     .order("prazo", { ascending: false })
 
+  if (lojaId) query = query.eq("loja_id", lojaId)
+
   if (options.isLideranca) {
-    // Liderança: todas as tarefas; filtros opcionais
     if (options.usuarioId) query = query.eq("atribuido_para", options.usuarioId)
     if (options.dataInicio) query = query.gte("prazo", `${options.dataInicio}T00:00:00`)
     if (options.dataFim) query = query.lte("prazo", `${options.dataFim}T23:59:59`)
   } else {
-    // Assistente: apenas tarefas atribuídas a ele, qualquer data
     query = query.eq("atribuido_para", options.userId)
   }
 
@@ -45,7 +48,6 @@ export async function getTasksForRole(options: {
 
   const tasks = (data as Task[]) ?? []
 
-  // Marcar PENDENTE com prazo < hoje como expirada (só visual; persistir em batch opcional)
   const normalized = tasks.map((t) => {
     if (t.status === "pendente" && t.prazo < `${today}T00:00:00`) {
       return { ...t, status: "expirada" as const }
@@ -56,41 +58,12 @@ export async function getTasksForRole(options: {
   return normalized
 }
 
-/** @deprecated Use getTasksForRole. Mantido para compatibilidade. */
-export async function getTodayTasks(
-  setor?: string,
-  status?: string
-): Promise<Task[]> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return []
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("cargo")
-    .eq("id", user.id)
-    .single()
-
-  const isLideranca =
-    profile?.cargo === "gerente" ||
-    profile?.cargo === "supervisão"
-
-  return getTasksForRole({
-    userId: user.id,
-    isLideranca: !!isLideranca,
-    setor,
-    status,
-  })
-}
-
 export async function createTask(formData: FormData): Promise<{ error?: string }> {
+  const session = await auth()
+  if (!session?.user?.profileId) return { error: "Nao autenticado" }
+
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: "Não autenticado" }
+  const lojaId = await getCurrentLojaId()
 
   const { error } = await supabase.from("tasks").insert({
     titulo: formData.get("titulo") as string,
@@ -98,7 +71,8 @@ export async function createTask(formData: FormData): Promise<{ error?: string }
     prazo: formData.get("prazo") as string,
     setor: (formData.get("setor") as string) || null,
     atribuido_para: formData.get("atribuido_para") as string,
-    criado_por: user.id,
+    criado_por: session.user.profileId,
+    loja_id: lojaId,
   })
 
   if (error) return { error: error.message }
@@ -154,11 +128,10 @@ export async function validateSubmission(
   approved: boolean,
   feedback: string | null
 ): Promise<{ error?: string }> {
+  const session = await auth()
+  if (!session?.user?.profileId) return { error: "Nao autenticado" }
+
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: "Não autenticado" }
 
   const { data: submission, error: fetchErr } = await supabase
     .from("task_submissions")
@@ -166,14 +139,14 @@ export async function validateSubmission(
     .eq("id", submissionId)
     .single()
 
-  if (fetchErr || !submission) return { error: "Submissão não encontrada" }
+  if (fetchErr || !submission) return { error: "Submissao nao encontrada" }
 
   const { error } = await supabase
     .from("task_submissions")
     .update({
       status_validacao: approved ? "aprovada" : "devolvida",
       feedback_lideranca: feedback,
-      validado_por: user.id,
+      validado_por: session.user.profileId,
       validado_em: new Date().toISOString(),
     })
     .eq("id", submissionId)
@@ -212,7 +185,6 @@ export async function deleteTask(taskId: string): Promise<{ error?: string }> {
   return {}
 }
 
-/** Liderança: reabrir tarefa expirada (status → pendente). */
 export async function reopenTask(taskId: string): Promise<{ error?: string }> {
   const supabase = await createClient()
   const { error } = await supabase
@@ -226,7 +198,6 @@ export async function reopenTask(taskId: string): Promise<{ error?: string }> {
   return {}
 }
 
-/** Marca como expirada todas as tarefas PENDENTE com prazo antes de hoje. */
 export async function markExpiredTasks(): Promise<{ error?: string }> {
   const supabase = await createClient()
   const today = new Date().toISOString().split("T")[0]
@@ -236,6 +207,5 @@ export async function markExpiredTasks(): Promise<{ error?: string }> {
     .eq("status", "pendente")
     .lt("prazo", `${today}T00:00:00`)
   if (error) return { error: error.message }
-  // Sem revalidatePath aqui: esta função deve ser usada por ações/cron, nunca durante render.
   return {}
 }
