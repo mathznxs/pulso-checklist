@@ -1,7 +1,52 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
-import type { Shift, Setor } from "@/lib/types"
+import type { Shift, Setor, EscalaEntry } from "@/lib/types"
+
+export async function getSetores(): Promise<Setor[]> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("setores")
+    .select("*")
+    .eq("ativo", true)
+    .order("nome")
+  return (data ?? []) as Setor[]
+}
+
+export async function getEscalaByDate(date: string): Promise<EscalaEntry[]> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("escala")
+    .select(`
+      *,
+      setor:setores(*),
+      shift:shifts(*),
+      profile:profiles(id, nome, matricula, cargo, ativo, avatar_url)
+    `)
+    .eq("data", date)
+    .order("criado_em")
+  return (data ?? []) as unknown as EscalaEntry[]
+}
+
+export async function upsertEscala(entries: {
+  setor_id: string
+  turno_id: string
+  funcionario_id: string
+  data: string
+  tipo: "fixa" | "provisoria"
+}[]) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from("escala")
+    .upsert(entries, { onConflict: "setor_id,turno_id,funcionario_id,data" })
+  if (error) throw error
+}
+
+export async function removeEscalaEntry(id: string) {
+  const supabase = await createClient()
+  const { error } = await supabase.from("escala").delete().eq("id", id)
+  if (error) throw error
+}
 
 export interface TodaySchedule {
   setor: string

@@ -508,7 +508,7 @@ export function ExecucaoContent({
                       </Button>
                     )}
 
-                    {/* Lideranca validate */}
+                    {/* Gerente validate */}
                     {isLideranca && task.status === "aguardando" && (
                       <Button
                         size="sm"
@@ -521,7 +521,7 @@ export function ExecucaoContent({
                       </Button>
                     )}
 
-                    {/* Liderança reabrir tarefa expirada */}
+                    {/* Gerente reabrir tarefa expirada */}
                     {isLideranca && task.status === "expirada" && (
                       <Button
                         size="sm"
@@ -539,7 +539,7 @@ export function ExecucaoContent({
                       </Button>
                     )}
 
-                    {/* Lideranca delete */}
+                    {/* Gerente delete */}
                     {isLideranca && (
                       <Button
                         size="sm"
@@ -606,7 +606,7 @@ export function ExecucaoContent({
                   </div>
                   {sub.feedback_lideranca && (
                     <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
-                      <p className="text-xs font-medium text-amber-800 dark:text-amber-300">Feedback da Liderança:</p>
+                      <p className="text-xs font-medium text-amber-800 dark:text-amber-300">Feedback do Gerente:</p>
                       <p className="mt-1 text-sm text-amber-700 dark:text-amber-400">{sub.feedback_lideranca}</p>
                     </div>
                   )}

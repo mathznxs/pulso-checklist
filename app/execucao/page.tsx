@@ -11,11 +11,7 @@ export default async function ExecucaoPage() {
   const { profile } = await getCurrentUser()
   if (!profile) redirect("/auth/login")
 
-  const isLideranca =
-    profile.cargo === "supervisão" ||
-    profile.cargo === "gerente" ||
-    profile.cargo === "admin" ||
-    profile.cargo === "lideranca"
+  const isLideranca = profile.cargo === "gerente"
 
   const [tasks, profiles] = await Promise.all([
     getTasksForRole({

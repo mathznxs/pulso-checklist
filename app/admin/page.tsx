@@ -3,27 +3,26 @@ export const runtime = 'nodejs'
 
 import { Navbar } from "@/components/pulso/navbar"
 import { getCurrentUser } from "@/lib/actions/auth"
-import { getAllProfiles, getShifts, getFixedSchedules, getDistinctSectors } from "@/lib/actions/admin"
+import { getAllProfiles, getShifts } from "@/lib/actions/admin"
+import { getSetores, getEscalaByDate } from "@/lib/actions/schedule"
 import { AdminContent } from "@/components/pulso/admin-content"
 import { redirect } from "next/navigation"
 
 export default async function AdminPage() {
-  const [{ profile }, profiles, shifts, schedules, sectors] = await Promise.all([
-    getCurrentUser(),
-    getAllProfiles(),
-    getShifts(),
-    getFixedSchedules(),
-    getDistinctSectors(),
-  ])
-
+  const { profile } = await getCurrentUser()
   if (!profile) redirect("/auth/login")
 
-  const isLideranca =
-    profile.cargo === "supervisão" ||
-    profile.cargo === "gerente" ||
-    profile.cargo === "admin"
+  const isGerente = profile.cargo === "gerente"
+  if (!isGerente) redirect("/")
 
-  if (!isLideranca) redirect("/")
+  const today = new Date().toISOString().slice(0, 10)
+
+  const [profiles, shifts, setores, escalaHoje] = await Promise.all([
+    getAllProfiles(),
+    getShifts(),
+    getSetores(),
+    getEscalaByDate(today),
+  ])
 
   return (
     <div className="min-h-screen bg-background">
@@ -32,8 +31,8 @@ export default async function AdminPage() {
         <AdminContent
           profiles={profiles}
           shifts={shifts}
-          schedules={schedules}
-          sectors={sectors}
+          setores={setores}
+          escalaEntries={escalaHoje}
           currentProfile={profile}
         />
       </main>
