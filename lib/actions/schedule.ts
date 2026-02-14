@@ -254,6 +254,8 @@ export async function getTodayAllSchedules(): Promise<
     matricula: string
     setor: string
     turno_nome: string
+    turno_inicio?: string
+    turno_fim?: string
     tipo: "fixa" | "provisória"
   }[]
 > {
@@ -268,20 +270,22 @@ export async function getTodayAllSchedules(): Promise<
     matricula: string
     setor: string
     turno_nome: string
+    turno_inicio?: string
+    turno_fim?: string
     tipo: "fixa" | "provisória"
   }[] = []
 
   // Get temp schedules for today
   const { data: temps } = await supabase
     .from("temporary_schedule")
-    .select("user_id, setor, shift:shifts(nome), profile:profiles(nome, matricula)")
+    .select("user_id, setor, shift:shifts(nome, hora_inicio, hora_fim), profile:profiles(nome, matricula)")
     .eq("data", todayStr)
 
   const tempUserIds = new Set<string>()
   if (temps) {
     for (const t of temps) {
       const profile = t.profile as unknown as { nome: string; matricula: string } | null
-      const shift = t.shift as unknown as { nome: string } | null
+      const shift = t.shift as unknown as { nome: string; hora_inicio: string; hora_fim: string } | null
       if (profile && shift) {
         result.push({
           userId: t.user_id,
@@ -289,6 +293,8 @@ export async function getTodayAllSchedules(): Promise<
           matricula: profile.matricula,
           setor: t.setor,
           turno_nome: shift.nome,
+          turno_inicio: shift.hora_inicio,
+          turno_fim: shift.hora_fim,
           tipo: "provisória",
         })
         tempUserIds.add(t.user_id)
@@ -299,7 +305,7 @@ export async function getTodayAllSchedules(): Promise<
   // scale_days (novo modelo)
   const { data: scaleDaysAll } = await supabase
     .from("scale_days")
-    .select("profile_id, setor, shift:shifts(nome), profile:profiles(nome, matricula)")
+    .select("profile_id, setor, shift:shifts(nome, hora_inicio, hora_fim), profile:profiles(nome, matricula)")
     .eq("dia_semana", dayOfWeek)
     .not("setor", "is", null)
 
@@ -307,7 +313,7 @@ export async function getTodayAllSchedules(): Promise<
     for (const sd of scaleDaysAll) {
       if (tempUserIds.has(sd.profile_id)) continue
       const profile = sd.profile as unknown as { nome: string; matricula: string } | null
-      const shift = sd.shift as unknown as { nome: string } | null
+      const shift = sd.shift as unknown as { nome: string; hora_inicio: string; hora_fim: string } | null
       if (profile && shift && sd.setor) {
         result.push({
           userId: sd.profile_id,
@@ -315,6 +321,8 @@ export async function getTodayAllSchedules(): Promise<
           matricula: profile.matricula,
           setor: sd.setor,
           turno_nome: shift.nome,
+          turno_inicio: shift.hora_inicio,
+          turno_fim: shift.hora_fim,
           tipo: "fixa",
         })
         tempUserIds.add(sd.profile_id)
@@ -325,14 +333,14 @@ export async function getTodayAllSchedules(): Promise<
   // Fallback: fixed_schedule (modelo antigo)
   const { data: fixedAll } = await supabase
     .from("fixed_schedule")
-    .select("user_id, setor, dias_semana, shift:shifts(nome), profile:profiles(nome, matricula)")
+    .select("user_id, setor, dias_semana, shift:shifts(nome, hora_inicio, hora_fim), profile:profiles(nome, matricula)")
     .contains("dias_semana", [dayOfWeek])
 
   if (fixedAll) {
     for (const f of fixedAll) {
       if (tempUserIds.has(f.user_id)) continue
       const profile = f.profile as unknown as { nome: string; matricula: string } | null
-      const shift = f.shift as unknown as { nome: string } | null
+      const shift = f.shift as unknown as { nome: string; hora_inicio: string; hora_fim: string } | null
       if (profile && shift) {
         result.push({
           userId: f.user_id,
@@ -340,6 +348,8 @@ export async function getTodayAllSchedules(): Promise<
           matricula: profile.matricula,
           setor: f.setor,
           turno_nome: shift.nome,
+          turno_inicio: shift.hora_inicio,
+          turno_fim: shift.hora_fim,
           tipo: "fixa",
         })
       }

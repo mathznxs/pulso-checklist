@@ -3,8 +3,7 @@ export const dynamic = 'force-dynamic'
 import { Navbar } from "@/components/pulso/navbar"
 import { getProfileForSession } from "@/lib/actions/auth"
 import { getUserTodaySchedule, getUserWeekSchedule, getTodayAllSchedules } from "@/lib/actions/schedule"
-import { getShifts } from "@/lib/actions/admin"
-import { getAllProfiles } from "@/lib/actions/admin"
+import { getShifts, getAllProfiles, getSetores } from "@/lib/actions/admin"
 import { EscalaContent } from "@/components/pulso/escala-content"
 import { redirect } from "next/navigation"
 
@@ -14,12 +13,13 @@ export default async function EscalaPage() {
 
   const isLideranca = profile.cargo === "gerente"
 
-  const [todaySchedule, weekSchedule, shifts, allSchedules, profiles] = await Promise.all([
+  const [todaySchedule, weekSchedule, shifts, allSchedules, profiles, setores] = await Promise.all([
     getUserTodaySchedule(profile.id),
     getUserWeekSchedule(profile.id),
     getShifts(),
     isLideranca ? getTodayAllSchedules() : Promise.resolve([]),
     isLideranca ? getAllProfiles() : Promise.resolve([]),
+    getSetores(),
   ])
 
   return (
@@ -32,6 +32,7 @@ export default async function EscalaPage() {
           allSchedules={allSchedules}
           shifts={shifts}
           profiles={profiles}
+          setores={setores}
           isLideranca={isLideranca}
           currentProfile={profile}
         />
