@@ -74,9 +74,7 @@ export async function getTodayTasks(
     .single()
 
   const isLideranca =
-    profile?.cargo === "lideranca" ||
     profile?.cargo === "gerente" ||
-    profile?.cargo === "admin" ||
     profile?.cargo === "supervisão"
 
   return getTasksForRole({

@@ -29,16 +29,12 @@ const cargoOrder: Record<Cargo, number> = {
   assistente: 0,
   supervisão: 1,
   gerente: 2,
-  admin: 3,
-  embaixador: 0,
 }
 
 const cargoLabels: Record<Cargo, string> = {
   assistente: "Assistente",
-  supervisão: "Supervisao",
+  supervisão: "Supervisão",
   gerente: "Gerente",
-  admin: "Administrador",
-  embaixador: "",
 }
 
 interface NavbarProps {

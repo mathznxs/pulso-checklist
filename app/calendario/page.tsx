@@ -15,8 +15,7 @@ export default async function CalendarioPage() {
 
   const isLideranca =
     profile?.cargo === "supervisão" ||
-    profile?.cargo === "gerente" ||
-    profile?.cargo === "admin"
+    profile?.cargo === "gerente"
 
   return (
     <div className="min-h-screen bg-background">

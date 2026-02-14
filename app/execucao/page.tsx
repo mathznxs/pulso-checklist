@@ -13,9 +13,7 @@ export default async function ExecucaoPage() {
 
   const isLideranca =
     profile.cargo === "supervisão" ||
-    profile.cargo === "gerente" ||
-    profile.cargo === "admin" ||
-    profile.cargo === "lideranca"
+    profile.cargo === "gerente"
 
   const [tasks, profiles] = await Promise.all([
     getTasksForRole({

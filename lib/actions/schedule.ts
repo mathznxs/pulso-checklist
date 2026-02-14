@@ -254,7 +254,7 @@ export async function getTodayAllSchedules(): Promise<
     matricula: string
     setor: string
     turno_nome: string
-    tipo: "fixa" | "provisoria"
+    tipo: "fixa" | "provisória"
   }[]
 > {
   const supabase = await createClient()
@@ -268,7 +268,7 @@ export async function getTodayAllSchedules(): Promise<
     matricula: string
     setor: string
     turno_nome: string
-    tipo: "fixa" | "provisoria"
+    tipo: "fixa" | "provisória"
   }[] = []
 
   // Get temp schedules for today
@@ -289,7 +289,7 @@ export async function getTodayAllSchedules(): Promise<
           matricula: profile.matricula,
           setor: t.setor,
           turno_nome: shift.nome,
-          tipo: "provisoria",
+          tipo: "provisória",
         })
         tempUserIds.add(t.user_id)
       }
