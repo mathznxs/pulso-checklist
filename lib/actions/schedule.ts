@@ -21,7 +21,7 @@ export async function getEscalaByDate(date: string): Promise<EscalaEntry[]> {
       *,
       setor:setores(*),
       shift:shifts(*),
-      profile:profiles(id, nome, matricula, cargo, ativo, avatar_url)
+      profile:profiles(id, nome, matricula, cargo, ativo)
     `)
     .eq("data", date)
     .order("criado_em")
