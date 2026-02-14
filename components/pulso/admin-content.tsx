@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import type { Profile, Shift, FixedSchedule } from "@/lib/types"
-import { createShift, createFixedSchedule, updateAnnouncement } from "@/lib/actions/admin"
+import type { Profile, Shift, Setor, EscalaEntry } from "@/lib/types"
+import { createShift, createEscalaEntry, deleteEscalaEntry, updateAnnouncement } from "@/lib/actions/admin"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,18 +15,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
   Users,
   UserPlus,
   Settings,
   Calendar,
-  ClipboardList,
   Search,
   Loader2,
   Edit2,
@@ -35,43 +27,28 @@ import {
   Megaphone,
   Clock,
   Plus,
+  Trash2,
+  CalendarDays,
 } from "lucide-react"
 
 const cargoConfig: Record<string, { label: string; bgClass: string }> = {
   assistente: { label: "Assistente", bgClass: "bg-blue-50 text-blue-700" },
-  supervisão: { label: "Supervisão", bgClass: "bg-amber-50 text-amber-700" },
   gerente: { label: "Gerente", bgClass: "bg-emerald-50 text-emerald-700" },
-  admin: { label: "Admin", bgClass: "bg-red-50 text-red-700" },
 }
-
-const SETORES = [
-  "Masculino", "Feminino", "Futebol", "Ilha", "Infantil",
-  "Anfitrião", "Caixa", "OMS", "Provador", "estoque",
-]
-
-const DIAS_SEMANA = [
-  { value: 0, label: "Dom" },
-  { value: 1, label: "Seg" },
-  { value: 2, label: "Ter" },
-  { value: 3, label: "Qua" },
-  { value: 4, label: "Qui" },
-  { value: 5, label: "Sex" },
-  { value: 6, label: "Sab" },
-]
 
 interface AdminContentProps {
   profiles: Profile[]
   shifts: Shift[]
-  schedules: FixedSchedule[]
-  sectors: string[]
+  setores: Setor[]
+  escalaEntries: EscalaEntry[]
   currentProfile: Profile
 }
 
 export function AdminContent({
   profiles,
   shifts,
-  schedules,
-  sectors,
+  setores,
+  escalaEntries,
   currentProfile,
 }: AdminContentProps) {
   const [activeTab, setActiveTab] = useState<"usuarios" | "escalas" | "turnos" | "sistema">("usuarios")
@@ -79,11 +56,17 @@ export function AdminContent({
   const [showCreateUser, setShowCreateUser] = useState(false)
   const [showEditUser, setShowEditUser] = useState<Profile | null>(null)
   const [showCreateShift, setShowCreateShift] = useState(false)
-  const [showCreateSchedule, setShowCreateSchedule] = useState(false)
   const [showAnnouncement, setShowAnnouncement] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [formError, setFormError] = useState<string | null>(null)
   const router = useRouter()
+
+  // Escala state
+  const [escalaDate, setEscalaDate] = useState(new Date().toISOString().split("T")[0])
+  const [addingToSetor, setAddingToSetor] = useState<Setor | null>(null)
+  const [selectedTurno, setSelectedTurno] = useState("")
+  const [selectedFuncionario, setSelectedFuncionario] = useState("")
+  const [selectedTipo, setSelectedTipo] = useState<"fixa" | "provisoria">("fixa")
 
   const filteredProfiles = profiles.filter(
     (p) =>
@@ -92,11 +75,22 @@ export function AdminContent({
   )
 
   const tabs = [
-    { key: "usuarios" as const, label: "Usuários", icon: Users },
+    { key: "usuarios" as const, label: "Usuarios", icon: Users },
     { key: "escalas" as const, label: "Escalas", icon: Calendar },
     { key: "turnos" as const, label: "Turnos", icon: Clock },
     { key: "sistema" as const, label: "Sistema", icon: Settings },
   ]
+
+  // Group escala entries by setor
+  const entriesBySetor = new Map<string, EscalaEntry[]>()
+  for (const entry of escalaEntries) {
+    const existing = entriesBySetor.get(entry.setor_id) ?? []
+    existing.push(entry)
+    entriesBySetor.set(entry.setor_id, existing)
+  }
+  for (const [, entries] of entriesBySetor) {
+    entries.sort((a, b) => (a.shift?.hora_inicio ?? "").localeCompare(b.shift?.hora_inicio ?? ""))
+  }
 
   // --- Create User ---
   async function handleCreateUser(e: React.FormEvent<HTMLFormElement>) {
@@ -182,20 +176,35 @@ export function AdminContent({
     })
   }
 
-  // --- Create Fixed Schedule ---
-  async function handleCreateSchedule(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const form = e.currentTarget
-    const fd = new FormData(form)
-    // Collect checked days
-    const dias = DIAS_SEMANA.filter(
-      (d) => fd.get(`dia_${d.value}`) === "on"
-    ).map((d) => d.value)
-    fd.set("dias_semana", dias.join(","))
+  // --- Add Escala Entry ---
+  async function handleAddEscalaEntry() {
+    if (!addingToSetor || !selectedTurno || !selectedFuncionario) return
+    setFormError(null)
 
     startTransition(async () => {
-      await createFixedSchedule(fd)
-      setShowCreateSchedule(false)
+      const result = await createEscalaEntry(
+        addingToSetor.id,
+        selectedTurno,
+        selectedFuncionario,
+        escalaDate,
+        selectedTipo
+      )
+      if (result.error) {
+        setFormError(result.error)
+        return
+      }
+      setAddingToSetor(null)
+      setSelectedTurno("")
+      setSelectedFuncionario("")
+      setFormError(null)
+      router.refresh()
+    })
+  }
+
+  // --- Delete Escala Entry ---
+  async function handleDeleteEscalaEntry(id: string) {
+    startTransition(async () => {
+      await deleteEscalaEntry(id)
       router.refresh()
     })
   }
@@ -212,13 +221,15 @@ export function AdminContent({
     })
   }
 
+  const activeProfiles = profiles.filter((p) => p.ativo)
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-foreground">Administração</h1>
+          <h1 className="text-xl font-bold text-foreground">Administracao</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Gerenciamento de usuários, escalas e configurações
+            Gerenciamento de usuarios, escalas e configuracoes
           </p>
         </div>
       </div>
@@ -249,7 +260,7 @@ export function AdminContent({
             <div className="relative flex-1 sm:max-w-xs">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Buscar por nome ou matrícula..."
+                placeholder="Buscar por nome ou matricula..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -264,11 +275,11 @@ export function AdminContent({
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Criar Novo Usuário</DialogTitle>
+                  <DialogTitle>Criar Novo Usuario</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleCreateUser} className="flex flex-col gap-4">
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="cu-matricula">Matrácula</Label>
+                    <Label htmlFor="cu-matricula">Matricula</Label>
                     <Input id="cu-matricula" name="matricula" required placeholder="Ex: 10234" />
                   </div>
                   <div className="flex flex-col gap-2">
@@ -288,9 +299,7 @@ export function AdminContent({
                       className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
                     >
                       <option value="assistente">Assistente</option>
-                      <option value="supervisão">Supervisor</option>
                       <option value="gerente">Gerente</option>
-                      <option value="embaixador">Embaixador</option>
                     </select>
                   </div>
                   <div className="flex flex-col gap-2">
@@ -301,8 +310,8 @@ export function AdminContent({
                       className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
                     >
                       <option value="">Nenhum</option>
-                      {SETORES.map((s) => (
-                        <option key={s} value={s}>{s}</option>
+                      {setores.map((s) => (
+                        <option key={s.id} value={s.nome}>{s.nome}</option>
                       ))}
                     </select>
                   </div>
@@ -311,7 +320,7 @@ export function AdminContent({
                   )}
                   <Button type="submit" disabled={isPending}>
                     {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Criar Usuário
+                    Criar Usuario
                   </Button>
                 </form>
               </DialogContent>
@@ -447,12 +456,12 @@ export function AdminContent({
           <Dialog open={showEditUser !== null} onOpenChange={(open) => !open && setShowEditUser(null)}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Editar Usuário</DialogTitle>
+                <DialogTitle>Editar Usuario</DialogTitle>
               </DialogHeader>
               {showEditUser && (
                 <form onSubmit={handleEditUser} className="flex flex-col gap-4">
                   <div className="flex flex-col gap-2">
-                    <Label>Matrícula</Label>
+                    <Label>Matricula</Label>
                     <Input value={showEditUser.matricula} disabled className="bg-muted" />
                   </div>
                   <div className="flex flex-col gap-2">
@@ -468,9 +477,7 @@ export function AdminContent({
                       className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
                     >
                       <option value="assistente">Assistente</option>
-                      <option value="lideranca">Supervisão</option>
                       <option value="gerente">Gerente</option>
-                      <option value="embaixador">Embaixador</option>
                     </select>
                   </div>
                   <div className="flex flex-col gap-2">
@@ -482,15 +489,15 @@ export function AdminContent({
                       className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
                     >
                       <option value="">Nenhum</option>
-                      {SETORES.map((s) => (
-                        <option key={s} value={s}>{s}</option>
+                      {setores.map((s) => (
+                        <option key={s.id} value={s.nome}>{s.nome}</option>
                       ))}
                     </select>
                   </div>
                   {formError && <p className="text-sm text-destructive">{formError}</p>}
                   <Button type="submit" disabled={isPending}>
                     {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Salvar Alterações
+                    Salvar Alteracoes
                   </Button>
                 </form>
               )}
@@ -502,145 +509,168 @@ export function AdminContent({
       {/* === ESCALAS TAB === */}
       {activeTab === "escalas" && (
         <div>
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-foreground">Escala Fixa</h3>
-            <Dialog open={showCreateSchedule} onOpenChange={setShowCreateSchedule}>
-              <DialogTrigger asChild>
-                <Button size="sm">
-                  <Plus className="mr-1.5 h-3.5 w-3.5" />
-                  Criar Escala Fixa
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Criar Escala Fixa</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleCreateSchedule} className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="cs-user">Funcionário</Label>
-                    <select
-                      id="cs-user"
-                      name="user_id"
-                      required
-                      className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
-                    >
-                      <option value="">Selecione</option>
-                      {profiles.filter((p) => p.ativo).map((p) => (
-                        <option key={p.id} value={p.id}>{p.nome} ({p.matricula})</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="cs-setor">Setor</Label>
-                    <select
-                      id="cs-setor"
-                      name="setor"
-                      required
-                      className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
-                    >
-                      <option value="">Selecione</option>
-                      {SETORES.map((s) => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="cs-turno">Turno</Label>
-                    <select
-                      id="cs-turno"
-                      name="turno_id"
-                      required
-                      className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
-                    >
-                      <option value="">Selecione</option>
-                      {shifts.map((s) => (
-                        <option key={s.id} value={s.id}>{s.nome} ({s.hora_inicio} - {s.hora_fim})</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label>Dias da Semana</Label>
-                    <div className="flex flex-wrap gap-3">
-                      {DIAS_SEMANA.map((d) => (
-                        <label key={d.value} className="flex items-center gap-1.5 text-sm">
-                          <input type="checkbox" name={`dia_${d.value}`} className="h-4 w-4 rounded border-input" />
-                          {d.label}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <Button type="submit" disabled={isPending}>
-                    {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Criar Escala
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="text-sm font-semibold text-foreground">Escala por Setor</h3>
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              <Input
+                type="date"
+                value={escalaDate}
+                onChange={(e) => setEscalaDate(e.target.value)}
+                className="w-auto"
+              />
+            </div>
           </div>
 
-          {/* Mobile: Card list */}
-          <div className="mt-4 flex flex-col gap-3 sm:hidden">
-            {schedules.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma escala fixa cadastrada</p>
-            ) : (
-              schedules.map((s) => (
-                <div key={s.id} className="rounded-lg border border-border bg-card p-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-foreground">{s.profile?.nome ?? "N/A"}</p>
-                    <p className="text-xs text-muted-foreground">{s.shift?.nome ?? "N/A"}</p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {setores.map((setor) => {
+              const entries = entriesBySetor.get(setor.id) ?? []
+              return (
+                <div
+                  key={setor.id}
+                  className="rounded-xl border-2 bg-card"
+                  style={{ borderColor: `${setor.cor}55` }}
+                >
+                  <div
+                    className="flex items-center justify-between rounded-t-[10px] px-4 py-3"
+                    style={{ backgroundColor: `${setor.cor}25` }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="inline-block h-3 w-3 rounded-full"
+                        style={{ backgroundColor: setor.cor }}
+                      />
+                      <h4 className="text-sm font-bold text-foreground">{setor.nome}</h4>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAddingToSetor(setor)
+                        setFormError(null)
+                        setSelectedTurno("")
+                        setSelectedFuncionario("")
+                      }}
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
+                      aria-label={`Adicionar turno ao setor ${setor.nome}`}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">{s.setor}</p>
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {s.dias_semana.map((d) => (
-                      <span key={d} className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-                        {DIAS_SEMANA.find((ds) => ds.value === d)?.label ?? d}
-                      </span>
-                    ))}
+                  <div className="flex flex-col gap-0 divide-y divide-border">
+                    {entries.length === 0 ? (
+                      <div className="px-4 py-6 text-center">
+                        <p className="text-xs text-muted-foreground">Nenhum turno escalado</p>
+                      </div>
+                    ) : (
+                      entries.map((entry) => (
+                        <div key={entry.id} className="flex items-center justify-between px-4 py-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-foreground">
+                              {entry.profile?.nome ?? "N/A"}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">
+                                {entry.shift?.nome} ({entry.shift?.hora_inicio.slice(0, 5)} - {entry.shift?.hora_fim.slice(0, 5)})
+                              </span>
+                              {entry.tipo === "provisoria" && (
+                                <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                                  Prov.
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteEscalaEntry(entry.id)}
+                            disabled={isPending}
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                            aria-label="Remover entrada"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
-              ))
-            )}
+              )
+            })}
           </div>
 
-          {/* Desktop: Table */}
-          <div className="mt-4 hidden overflow-x-auto rounded-lg border border-border sm:block">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/50">
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Funcionario</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Setor</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Turno</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Dias</th>
-                </tr>
-              </thead>
-              <tbody className="bg-card">
-                {schedules.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
-                      Nenhuma escala fixa cadastrada
-                    </td>
-                  </tr>
-                ) : (
-                  schedules.map((s) => (
-                    <tr key={s.id} className="border-b border-border transition-colors last:border-b-0 hover:bg-muted/30">
-                      <td className="px-4 py-3 font-medium text-foreground">{s.profile?.nome ?? "N/A"}</td>
-                      <td className="px-4 py-3 text-foreground">{s.setor}</td>
-                      <td className="px-4 py-3 text-foreground">{s.shift?.nome ?? "N/A"}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {s.dias_semana.map((d) => (
-                            <span key={d} className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
-                              {DIAS_SEMANA.find((ds) => ds.value === d)?.label ?? d}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          {/* Add Entry Dialog */}
+          <Dialog
+            open={addingToSetor !== null}
+            onOpenChange={(open) => {
+              if (!open) {
+                setAddingToSetor(null)
+                setFormError(null)
+              }
+            }}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Adicionar Turno - {addingToSetor?.nome}</DialogTitle>
+              </DialogHeader>
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
+                  <Label>Data</Label>
+                  <Input type="date" value={escalaDate} disabled className="bg-muted" />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="admin-add-turno">Turno</Label>
+                  <select
+                    id="admin-add-turno"
+                    value={selectedTurno}
+                    onChange={(e) => setSelectedTurno(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
+                  >
+                    <option value="">Selecione o turno</option>
+                    {shifts.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.nome} ({s.hora_inicio.slice(0, 5)} - {s.hora_fim.slice(0, 5)})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="admin-add-func">Funcionario</Label>
+                  <select
+                    id="admin-add-func"
+                    value={selectedFuncionario}
+                    onChange={(e) => setSelectedFuncionario(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
+                  >
+                    <option value="">Selecione o funcionario</option>
+                    {activeProfiles.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nome} ({p.matricula})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="admin-add-tipo">Tipo</Label>
+                  <select
+                    id="admin-add-tipo"
+                    value={selectedTipo}
+                    onChange={(e) => setSelectedTipo(e.target.value as "fixa" | "provisoria")}
+                    className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
+                  >
+                    <option value="fixa">Fixa</option>
+                    <option value="provisoria">Provisoria</option>
+                  </select>
+                </div>
+                {formError && <p className="text-sm text-destructive">{formError}</p>}
+                <Button
+                  onClick={handleAddEscalaEntry}
+                  disabled={isPending || !selectedTurno || !selectedFuncionario}
+                >
+                  {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Confirmar
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       )}
 
@@ -666,7 +696,7 @@ export function AdminContent({
                     <Input id="st-nome" name="nome" required placeholder="Ex: Manha" />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="st-inicio">Hora Início</Label>
+                    <Label htmlFor="st-inicio">Hora Inicio</Label>
                     <Input id="st-inicio" name="hora_inicio" type="time" required />
                   </div>
                   <div className="flex flex-col gap-2">
@@ -704,11 +734,11 @@ export function AdminContent({
       {activeTab === "sistema" && (
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="rounded-lg border border-border bg-card p-5">
-            <h4 className="text-sm font-semibold text-foreground">Informações do Sistema</h4>
+            <h4 className="text-sm font-semibold text-foreground">Informacoes do Sistema</h4>
             <div className="mt-4 flex flex-col gap-3 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Versão</span>
-                <span className="font-medium text-foreground">3.0</span>
+                <span className="text-muted-foreground">Versao</span>
+                <span className="font-medium text-foreground">4.0</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Banco</span>
@@ -722,26 +752,12 @@ export function AdminContent({
                 <span className="text-muted-foreground">Ativos</span>
                 <span className="font-medium text-foreground">{profiles.filter((p) => p.ativo).length}</span>
               </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Setores</span>
+                <span className="font-medium text-foreground">{setores.length}</span>
+              </div>
             </div>
           </div>
-
-          {/* <div className="rounded-lg border border-border bg-card p-5">
-            <h4 className="text-sm font-semibold text-foreground">Configuracoes de Login</h4>
-            <div className="mt-4 flex flex-col gap-3 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Login via</span>
-                <span className="font-medium text-foreground">Matrícula</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Senha</span>
-                <span className="font-medium text-foreground">CPF</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Autenticação</span>
-                <span className="font-medium text-foreground">Supabase Auth</span>
-              </div>
-            </div>
-          </div> */}
 
           <div className="rounded-lg border border-border bg-card p-5 sm:col-span-2">
             <div className="flex items-center justify-between">

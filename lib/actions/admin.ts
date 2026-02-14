@@ -2,7 +2,9 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
-import type { Profile, Shift, FixedSchedule } from "@/lib/types"
+import type { Profile, Shift, Setor, EscalaEntry } from "@/lib/types"
+
+// ─── PROFILES ───
 
 export async function getAllProfiles(): Promise<Profile[]> {
   const supabase = await createClient()
@@ -29,6 +31,8 @@ export async function updateProfile(
   return {}
 }
 
+// ─── SHIFTS ───
+
 export async function getShifts(): Promise<Shift[]> {
   const supabase = await createClient()
   const { data } = await supabase
@@ -53,33 +57,106 @@ export async function createShift(
   return {}
 }
 
-export async function getFixedSchedules(): Promise<FixedSchedule[]> {
+// ─── SETORES ───
+
+export async function getSetoresAtivos(): Promise<Setor[]> {
   const supabase = await createClient()
   const { data } = await supabase
-    .from("fixed_schedule")
-    .select("*, profile:profiles(*), shift:shifts(*)")
-    .order("setor", { ascending: true })
+    .from("setores")
+    .select("*")
+    .eq("ativo", true)
+    .order("nome", { ascending: true })
 
-  return (data as FixedSchedule[]) ?? []
+  return (data as Setor[]) ?? []
 }
 
-export async function createFixedSchedule(
-  formData: FormData
+export async function getAllSetores(): Promise<Setor[]> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("setores")
+    .select("*")
+    .order("nome", { ascending: true })
+
+  return (data as Setor[]) ?? []
+}
+
+// ─── ESCALA (NOVO MODELO POR SETOR) ───
+
+export async function getEscalaByDate(data: string): Promise<EscalaEntry[]> {
+  const supabase = await createClient()
+  const { data: entries } = await supabase
+    .from("escala")
+    .select(`
+      *,
+      setor:setores(*),
+      shift:shifts(*),
+      profile:profiles(*)
+    `)
+    .eq("data", data)
+    .order("setor_id", { ascending: true })
+
+  return (entries as unknown as EscalaEntry[]) ?? []
+}
+
+export async function createEscalaEntry(
+  setorId: string,
+  turnoId: string,
+  funcionarioId: string,
+  data: string,
+  tipo: "fixa" | "provisoria"
 ): Promise<{ error?: string }> {
   const supabase = await createClient()
-  const diasStr = formData.get("dias_semana") as string
-  const dias = diasStr ? diasStr.split(",").map(Number) : []
 
-  const { error } = await supabase.from("fixed_schedule").insert({
-    user_id: formData.get("user_id") as string,
-    setor: formData.get("setor") as string,
-    turno_id: formData.get("turno_id") as string,
-    dias_semana: dias,
+  // Validacao 1: nao duplicar turno no mesmo setor na mesma data
+  const { data: existing } = await supabase
+    .from("escala")
+    .select("id")
+    .eq("setor_id", setorId)
+    .eq("turno_id", turnoId)
+    .eq("data", data)
+    .limit(1)
+
+  if (existing && existing.length > 0) {
+    return { error: "Esse turno ja esta atribuido nesse setor para essa data." }
+  }
+
+  // Validacao 2: funcionario nao pode estar em dois setores no mesmo turno/data
+  const { data: conflict } = await supabase
+    .from("escala")
+    .select("id, setor:setores(nome)")
+    .eq("funcionario_id", funcionarioId)
+    .eq("turno_id", turnoId)
+    .eq("data", data)
+    .limit(1)
+
+  if (conflict && conflict.length > 0) {
+    return { error: "Esse funcionario ja esta escalado em outro setor no mesmo turno e data." }
+  }
+
+  const { error } = await supabase.from("escala").insert({
+    setor_id: setorId,
+    turno_id: turnoId,
+    funcionario_id: funcionarioId,
+    data,
+    tipo,
   })
+
   if (error) return { error: error.message }
+  revalidatePath("/escala")
   revalidatePath("/admin")
   return {}
 }
+
+export async function deleteEscalaEntry(id: string): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { error } = await supabase.from("escala").delete().eq("id", id)
+  if (error) return { error: error.message }
+  revalidatePath("/escala")
+  revalidatePath("/admin")
+  return {}
+}
+
+// ─── ANNOUNCEMENTS ───
 
 export async function updateAnnouncement(
   message: string
@@ -88,12 +165,10 @@ export async function updateAnnouncement(
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { error: "Não autenticado" }
+  if (!user) return { error: "Nao autenticado" }
 
-  // Deactivate existing
   await supabase.from("announcements").update({ ativo: false }).eq("ativo", true)
 
-  // Create new
   const { error } = await supabase.from("announcements").insert({
     message,
     criado_por: user.id,
@@ -102,16 +177,4 @@ export async function updateAnnouncement(
   if (error) return { error: error.message }
   revalidatePath("/")
   return {}
-}
-
-export async function getDistinctSectors(): Promise<string[]> {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from("profiles")
-    .select("setor_base")
-    .not("setor_base", "is", null)
-
-  if (!data) return []
-  const sectors = new Set(data.map((d) => d.setor_base as string))
-  return Array.from(sectors).sort()
 }

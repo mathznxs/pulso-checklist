@@ -22,23 +22,17 @@ const navItems = [
   { label: "Calendario", href: "/calendario", icon: Calendar, minCargo: "assistente" as Cargo },
   { label: "Gincanas", href: "/gincanas", icon: Trophy, minCargo: "assistente" as Cargo },
   { label: "Escala", href: "/escala", icon: CalendarClock, minCargo: "assistente" as Cargo },
-  { label: "Admin", href: "/admin", icon: Settings, minCargo: "supervisão" as Cargo },
+  { label: "Admin", href: "/admin", icon: Settings, minCargo: "gerente" as Cargo },
 ]
 
 const cargoOrder: Record<Cargo, number> = {
   assistente: 0,
-  supervisão: 1,
-  gerente: 2,
-  admin: 3,
-  embaixador: 0,
+  gerente: 1,
 }
 
 const cargoLabels: Record<Cargo, string> = {
   assistente: "Assistente",
-  supervisão: "Supervisao",
   gerente: "Gerente",
-  admin: "Administrador",
-  embaixador: "",
 }
 
 interface NavbarProps {

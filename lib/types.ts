@@ -1,4 +1,4 @@
-export type Cargo = "assistente" | "supervisão" | "gerente" | "admin" | "embaixador"
+export type Cargo = "assistente" | "gerente"
 
 export type TaskStatus =
   | "pendente"
@@ -145,4 +145,25 @@ export interface SectorStats {
   concluidas: number
   total: number
   pendentes: number
+}
+
+export interface Setor {
+  id: string
+  nome: string
+  cor: string
+  ativo: boolean
+}
+
+export interface EscalaEntry {
+  id: string
+  setor_id: string
+  turno_id: string
+  funcionario_id: string
+  data: string
+  tipo: "fixa" | "provisoria"
+  criado_em: string
+  // Joined
+  setor?: Setor
+  shift?: Shift
+  profile?: Profile
 }

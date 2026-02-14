@@ -2,9 +2,9 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import type { Profile, Shift } from "@/lib/types"
-import type { TodaySchedule, WeekScheduleDay } from "@/lib/actions/schedule"
-import { createTemporarySchedule } from "@/lib/actions/schedule"
+import type { Profile, Shift, Setor, EscalaEntry } from "@/lib/types"
+import type { TodaySchedule } from "@/lib/actions/schedule"
+import { createEscalaEntry, deleteEscalaEntry } from "@/lib/actions/admin"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,64 +13,106 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
-import { MapPin, Clock, CalendarDays, Plus, Loader2, AlertTriangle } from "lucide-react"
-
-const SETORES = [
-  "Masculino", "Feminino", "Futebol", "Ilha", "Infantil",
-  "Anfitriao", "Caixa", "OMS", "Provador", "Estoque",
-]
+import { MapPin, Clock, Plus, Loader2, AlertTriangle, Trash2, CalendarDays } from "lucide-react"
 
 interface EscalaContentProps {
   todaySchedule: TodaySchedule | null
-  weekSchedule: WeekScheduleDay[]
-  allSchedules: {
-    userId: string
-    nome: string
-    matricula: string
-    setor: string
-    turno_nome: string
-    tipo: "fixa" | "provisória"
-  }[]
+  todayEntries: EscalaEntry[]
+  setores: Setor[]
   shifts: Shift[]
   profiles: Profile[]
-  isLideranca: boolean
+  isGerente: boolean
   currentProfile: Profile
 }
 
 export function EscalaContent({
   todaySchedule,
-  weekSchedule,
-  allSchedules,
+  todayEntries,
+  setores,
   shifts,
   profiles,
-  isLideranca,
+  isGerente,
   currentProfile,
 }: EscalaContentProps) {
-  const [showTempDialog, setShowTempDialog] = useState(false)
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0])
+  const [addingToSetor, setAddingToSetor] = useState<Setor | null>(null)
+  const [selectedTurno, setSelectedTurno] = useState("")
+  const [selectedFuncionario, setSelectedFuncionario] = useState("")
+  const [selectedTipo, setSelectedTipo] = useState<"fixa" | "provisoria">("fixa")
   const [isPending, startTransition] = useTransition()
+  const [formError, setFormError] = useState<string | null>(null)
   const router = useRouter()
-  const today = new Date()
-  const dayOfWeek = today.getDay()
 
-  async function handleCreateTemp(formData: FormData) {
+  // Group entries by setor
+  const entriesBySetor = new Map<string, EscalaEntry[]>()
+  for (const entry of todayEntries) {
+    const setorId = entry.setor_id
+    const existing = entriesBySetor.get(setorId) ?? []
+    existing.push(entry)
+    entriesBySetor.set(setorId, existing)
+  }
+
+  // Sort entries within each setor by shift hora_inicio
+  for (const [, entries] of entriesBySetor) {
+    entries.sort((a, b) => {
+      const aStart = a.shift?.hora_inicio ?? ""
+      const bStart = b.shift?.hora_inicio ?? ""
+      return aStart.localeCompare(bStart)
+    })
+  }
+
+  async function handleAddEntry() {
+    if (!addingToSetor || !selectedTurno || !selectedFuncionario) return
+    setFormError(null)
+
     startTransition(async () => {
-      await createTemporarySchedule(formData)
-      setShowTempDialog(false)
+      const result = await createEscalaEntry(
+        addingToSetor.id,
+        selectedTurno,
+        selectedFuncionario,
+        selectedDate,
+        selectedTipo
+      )
+      if (result.error) {
+        setFormError(result.error)
+        return
+      }
+      setAddingToSetor(null)
+      setSelectedTurno("")
+      setSelectedFuncionario("")
+      setFormError(null)
       router.refresh()
     })
   }
+
+  async function handleDeleteEntry(entryId: string) {
+    startTransition(async () => {
+      await deleteEscalaEntry(entryId)
+      router.refresh()
+    })
+  }
+
+  const activeProfiles = profiles.filter((p) => p.ativo)
 
   return (
     <div className="flex flex-col gap-6">
       {/* Banner - Seu setor hoje */}
       {todaySchedule ? (
-        <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-5">
+        <div
+          className="rounded-xl border-2 p-5"
+          style={{
+            borderColor: `${todaySchedule.setor_cor}66`,
+            backgroundColor: `${todaySchedule.setor_cor}12`,
+          }}
+        >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
-                <MapPin className="h-6 w-6 text-primary-foreground" />
+              <div
+                className="flex h-12 w-12 items-center justify-center rounded-xl"
+                style={{ backgroundColor: todaySchedule.setor_cor }}
+              >
+                <MapPin className="h-6 w-6 text-foreground" />
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -88,7 +130,7 @@ export function EscalaContent({
               </div>
               {todaySchedule.tipo === "provisoria" && (
                 <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
-                  Provisória
+                  Provisoria
                 </span>
               )}
             </div>
@@ -99,192 +141,203 @@ export function EscalaContent({
           <div className="flex items-center gap-3">
             <AlertTriangle className="h-5 w-5 text-amber-500" />
             <p className="text-sm text-muted-foreground">
-              Voce não tem uma escala configurada para hoje. Fale com a liderança.
+              Voce nao tem uma escala configurada para hoje. Fale com a gerencia.
             </p>
           </div>
         </div>
       )}
 
-      {/* Header */}
+      {/* Header + Date Picker */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold text-foreground">Escala</h1>
           <p className="text-sm text-muted-foreground">
-            {isLideranca
-              ? "Visualize a escala geral e crie alterações provisórias"
-              : "Sua escala semanal"}
+            {isGerente
+              ? "Visualize e gerencie a escala por setor"
+              : "Escala geral do dia"}
           </p>
         </div>
-        {isLideranca && (
-          <Dialog open={showTempDialog} onOpenChange={setShowTempDialog}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="mr-1.5 h-3.5 w-3.5" />
-                Escala Provisória
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Criar Escala Provisória</DialogTitle>
-              </DialogHeader>
-              <form action={handleCreateTemp} className="flex flex-col gap-4">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="tp-user">Funcionário</Label>
-                  <select
-                    id="tp-user"
-                    name="user_id"
-                    required
-                    className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
-                  >
-                    <option value="">Selecione</option>
-                    {profiles.filter((p) => p.ativo).map((p) => (
-                      <option key={p.id} value={p.id}>{p.nome} ({p.matricula})</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="tp-setor">Setor</Label>
-                  <select
-                    id="tp-setor"
-                    name="setor"
-                    required
-                    className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
-                  >
-                    <option value="">Selecione</option>
-                    {SETORES.map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="tp-data">Data</Label>
-                  <Input
-                    id="tp-data"
-                    name="data"
-                    type="date"
-                    required
-                    defaultValue={today.toISOString().split("T")[0]}
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="tp-turno">Turno</Label>
-                  <select
-                    id="tp-turno"
-                    name="turno_id"
-                    required
-                    className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
-                  >
-                    <option value="">Selecione</option>
-                    {shifts.map((s) => (
-                      <option key={s.id} value={s.id}>{s.nome} ({s.hora_inicio.slice(0, 5)} - {s.hora_fim.slice(0, 5)})</option>
-                    ))}
-                  </select>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  A escala provisória não afeta a escala fixa e se aplica apenas ao dia selecionado.
-                </p>
-                <Button type="submit" disabled={isPending}>
-                  {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Criar
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+        {isGerente && (
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              <Input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-auto"
+              />
+            </div>
+          </div>
         )}
       </div>
 
-      {/* Personal Week Schedule */}
-      <div className="rounded-xl border border-border bg-card p-5">
-        <div className="flex items-center gap-2">
-          <CalendarDays className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Minha Semana
-          </h3>
-        </div>
-        <div className="-mx-5 mt-4 overflow-x-auto px-5 sm:mx-0 sm:px-0">
-          <div className="flex gap-2 sm:grid sm:grid-cols-7">
-            {weekSchedule.map((day) => {
-              const isToday = day.dayIndex === dayOfWeek
-              return (
-                <div
-                  key={day.dayIndex}
-                  className={`flex min-w-[80px] flex-col items-center rounded-lg border p-3 text-center transition-colors sm:min-w-0 ${
-                    isToday
-                      ? "border-primary bg-primary/5"
-                      : day.setor
-                        ? "border-border bg-card"
-                        : "border-border bg-muted/30"
-                  }`}
-                >
-                  <span className={`text-xs font-bold ${isToday ? "text-primary" : "text-muted-foreground"}`}>
-                    {day.dayLabel}
-                  </span>
-                  {day.setor ? (
-                    <>
-                      <span className="mt-1 text-sm font-semibold text-foreground">{day.setor}</span>
-                      <span className="mt-0.5 text-[10px] text-muted-foreground">
-                        {day.turno_nome}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="mt-1 text-xs text-muted-foreground">Folga</span>
-                  )}
+      {/* Sector Cards Grid */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {setores.map((setor) => {
+          const entries = entriesBySetor.get(setor.id) ?? []
+          return (
+            <div
+              key={setor.id}
+              className="rounded-xl border-2 bg-card"
+              style={{ borderColor: `${setor.cor}55` }}
+            >
+              {/* Sector Header */}
+              <div
+                className="flex items-center justify-between rounded-t-[10px] px-4 py-3"
+                style={{ backgroundColor: `${setor.cor}25` }}
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className="inline-block h-3 w-3 rounded-full"
+                    style={{ backgroundColor: setor.cor }}
+                  />
+                  <h3 className="text-sm font-bold text-foreground">{setor.nome}</h3>
                 </div>
-              )
-            })}
-          </div>
-        </div>
-      </div>
+                {isGerente && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAddingToSetor(setor)
+                      setFormError(null)
+                      setSelectedTurno("")
+                      setSelectedFuncionario("")
+                    }}
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
+                    aria-label={`Adicionar turno ao setor ${setor.nome}`}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
 
-      {/* Lideranca: Full schedule view */}
-      {isLideranca && (
-        <div>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Escala Geral de Hoje
-          </h3>
-          <div className="mt-4 overflow-x-auto rounded-lg border border-border">
-            <table className="w-full min-w-[500px] text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/50">
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Funcionário</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Setor</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Turno</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tipo</th>
-                </tr>
-              </thead>
-              <tbody className="bg-card">
-                {allSchedules.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
-                      Nenhuma escala configurada para hoje
-                    </td>
-                  </tr>
+              {/* Entries */}
+              <div className="flex flex-col gap-0 divide-y divide-border">
+                {entries.length === 0 ? (
+                  <div className="px-4 py-6 text-center">
+                    <p className="text-xs text-muted-foreground">
+                      Nenhum turno escalado
+                    </p>
+                  </div>
                 ) : (
-                  allSchedules.map((s) => (
-                    <tr key={`${s.userId}-${s.setor}`} className="border-b border-border transition-colors last:border-b-0 hover:bg-muted/30">
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-foreground">{s.nome}</p>
-                        <p className="text-xs text-muted-foreground">{s.matricula}</p>
-                      </td>
-                      <td className="px-4 py-3 text-foreground">{s.setor}</td>
-                      <td className="px-4 py-3 text-foreground">{s.turno_nome}</td>
-                      <td className="px-4 py-3">
-                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          s.tipo === "fixa"
-                            ? "bg-emerald-50 text-emerald-700"
-                            : "bg-amber-50 text-amber-700"
-                        }`}>
-                          {s.tipo === "fixa" ? "Fixa" : "Provisoria"}
-                        </span>
-                      </td>
-                    </tr>
+                  entries.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="flex items-center justify-between px-4 py-3"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {entry.profile?.nome ?? "N/A"}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">
+                            {entry.shift?.nome} ({entry.shift?.hora_inicio.slice(0, 5)} - {entry.shift?.hora_fim.slice(0, 5)})
+                          </span>
+                          {entry.tipo === "provisoria" && (
+                            <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                              Prov.
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {isGerente && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteEntry(entry.id)}
+                          disabled={isPending}
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                          aria-label="Remover entrada"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
                   ))
                 )}
-              </tbody>
-            </table>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Add Entry Dialog */}
+      <Dialog
+        open={addingToSetor !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setAddingToSetor(null)
+            setFormError(null)
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Adicionar Turno - {addingToSetor?.nome}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <Label>Data</Label>
+              <Input type="date" value={selectedDate} disabled className="bg-muted" />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="add-turno">Turno</Label>
+              <select
+                id="add-turno"
+                value={selectedTurno}
+                onChange={(e) => setSelectedTurno(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
+              >
+                <option value="">Selecione o turno</option>
+                {shifts.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.nome} ({s.hora_inicio.slice(0, 5)} - {s.hora_fim.slice(0, 5)})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="add-func">Funcionario</Label>
+              <select
+                id="add-func"
+                value={selectedFuncionario}
+                onChange={(e) => setSelectedFuncionario(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
+              >
+                <option value="">Selecione o funcionario</option>
+                {activeProfiles.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nome} ({p.matricula})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="add-tipo">Tipo</Label>
+              <select
+                id="add-tipo"
+                value={selectedTipo}
+                onChange={(e) => setSelectedTipo(e.target.value as "fixa" | "provisoria")}
+                className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
+              >
+                <option value="fixa">Fixa</option>
+                <option value="provisoria">Provisoria</option>
+              </select>
+            </div>
+            {formError && (
+              <p className="text-sm text-destructive">{formError}</p>
+            )}
+            <Button
+              onClick={handleAddEntry}
+              disabled={isPending || !selectedTurno || !selectedFuncionario}
+            >
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Confirmar
+            </Button>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
