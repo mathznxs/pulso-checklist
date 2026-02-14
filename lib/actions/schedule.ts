@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { auth } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
 import type { Shift, ScaleDay } from "@/lib/types"
 import { DIAS_LABELS } from "@/lib/utils/schedule.utils"
@@ -227,18 +228,17 @@ export async function deleteScheduleDay(
 export async function createTemporarySchedule(
   formData: FormData
 ): Promise<{ error?: string }> {
+  const session = await auth()
+  if (!session?.user?.profileId) return { error: "Nao autenticado" }
+
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: "Não autenticado" }
 
   const { error } = await supabase.from("temporary_schedule").insert({
     user_id: formData.get("user_id") as string,
     setor: formData.get("setor") as string,
     data: formData.get("data") as string,
     turno_id: formData.get("turno_id") as string,
-    criado_por: user.id,
+    criado_por: session.user.profileId,
   })
 
   if (error) return { error: error.message }

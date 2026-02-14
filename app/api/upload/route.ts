@@ -1,30 +1,33 @@
-export const runtime = 'nodejs'
+export const runtime = "nodejs"
 
-import { createClient } from "@/lib/supabase/server"
+import { auth } from "@/lib/auth"
+import { createServiceClient } from "@/lib/supabase/service"
 import { NextResponse } from "next/server"
 
 export async function POST(request: Request) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
+  const session = await auth()
+  if (!session?.user?.profileId) {
+    return NextResponse.json({ error: "Nao autenticado" }, { status: 401 })
   }
 
   const formData = await request.formData()
   const file = formData.get("file") as File | null
 
   if (!file) {
-    return NextResponse.json({ error: "Arquivo não enviado" }, { status: 400 })
+    return NextResponse.json({ error: "Arquivo nao enviado" }, { status: 400 })
   }
 
   // Validate file type
-  const allowed = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]
+  const allowed = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/heic",
+    "image/heif",
+  ]
   if (!allowed.includes(file.type)) {
     return NextResponse.json(
-      { error: "Tipo de arquivo não permitido. Use JPG, PNG ou WebP." },
+      { error: "Tipo de arquivo nao permitido. Use JPG, PNG ou WebP." },
       { status: 400 }
     )
   }
@@ -37,8 +40,10 @@ export async function POST(request: Request) {
     )
   }
 
+  const supabase = createServiceClient()
+
   const ext = file.name.split(".").pop() ?? "jpg"
-  const fileName = `${user.id}/${Date.now()}.${ext}`
+  const fileName = `${session.user.profileId}/${Date.now()}.${ext}`
 
   const { error: uploadError } = await supabase.storage
     .from("task-images")
@@ -48,11 +53,14 @@ export async function POST(request: Request) {
     })
 
   if (uploadError) {
-    // If bucket doesn't exist, try to create it
-    if (uploadError.message.includes("not found") || uploadError.message.includes("Bucket")) {
-      // Try uploading to a different path or return a helpful error
+    if (
+      uploadError.message.includes("not found") ||
+      uploadError.message.includes("Bucket")
+    ) {
       return NextResponse.json(
-        { error: `Erro no upload: ${uploadError.message}. Verifique se o bucket 'task-images' existe no Supabase Storage.` },
+        {
+          error: `Erro no upload: ${uploadError.message}. Verifique se o bucket 'task-images' existe no Supabase Storage.`,
+        },
         { status: 500 }
       )
     }

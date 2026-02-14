@@ -1,14 +1,14 @@
 export const dynamic = 'force-dynamic'
 
 import { Navbar } from "@/components/pulso/navbar"
-import { getCurrentUser } from "@/lib/actions/auth"
+import { getProfileForSession } from "@/lib/actions/auth"
 import { getActiveChallenges, getChallengeScores } from "@/lib/actions/challenges"
 import { getAllProfiles } from "@/lib/actions/admin"
 import { GincanasContent } from "@/components/pulso/gincanas-content"
 import { redirect } from "next/navigation"
 
 export default async function GincanasPage() {
-  const { profile } = await getCurrentUser()
+  const profile = await getProfileForSession()
   if (!profile) redirect("/auth/login")
 
   const [challenges, profiles] = await Promise.all([
@@ -21,9 +21,7 @@ export default async function GincanasPage() {
     ? await getChallengeScores(activeChallenge.id)
     : []
 
-  const isLideranca =
-    profile?.cargo === "supervisão" ||
-    profile?.cargo === "gerente"
+  const isLideranca = profile?.cargo === "gerente"
 
   return (
     <div className="min-h-screen bg-background">

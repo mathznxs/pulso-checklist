@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { getCurrentLojaId } from "@/lib/actions/auth"
 import type {
   DashboardStats,
   SectorStats,
@@ -8,13 +9,15 @@ import type {
   Announcement,
 } from "@/lib/types"
 
-/** Métricas reais: todas as tarefas (sem filtro apenas por hoje). */
+/** Metricas reais: todas as tarefas da loja do usuario. */
 export async function getDashboardStats(): Promise<DashboardStats> {
   const supabase = await createClient()
+  const lojaId = await getCurrentLojaId()
 
-  const { data: tasks } = await supabase
-    .from("tasks")
-    .select("status, setor")
+  let query = supabase.from("tasks").select("status, setor")
+  if (lojaId) query = query.eq("loja_id", lojaId)
+
+  const { data: tasks } = await query
 
   const stats: DashboardStats = {
     concluidas: 0,
@@ -36,11 +39,15 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   return stats
 }
 
-/** Estatísticas por setor (todas as tarefas). */
+/** Estatisticas por setor (tarefas da loja). */
 export async function getSectorStats(): Promise<SectorStats[]> {
   const supabase = await createClient()
+  const lojaId = await getCurrentLojaId()
 
-  const { data: tasks } = await supabase.from("tasks").select("status, setor")
+  let query = supabase.from("tasks").select("status, setor")
+  if (lojaId) query = query.eq("loja_id", lojaId)
+
+  const { data: tasks } = await query
 
   const sectorMap = new Map<
     string,
@@ -90,13 +97,18 @@ export async function getChecklistPercentage(): Promise<number> {
 
 export async function getActiveAnnouncement(): Promise<Announcement | null> {
   const supabase = await createClient()
-  const { data } = await supabase
+  const lojaId = await getCurrentLojaId()
+
+  let query = supabase
     .from("announcements")
     .select("*")
     .eq("ativo", true)
     .order("criado_em", { ascending: false })
     .limit(1)
-    .single()
+
+  if (lojaId) query = query.eq("loja_id", lojaId)
+
+  const { data } = await query.single()
   return data as Announcement | null
 }
 
@@ -104,6 +116,7 @@ export async function getWeeklyPerformance(): Promise<
   { day: string; percentage: number }[]
 > {
   const supabase = await createClient()
+  const lojaId = await getCurrentLojaId()
   const dayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"]
 
   const now = new Date()
@@ -115,11 +128,15 @@ export async function getWeeklyPerformance(): Promise<
   const startStr = startOfWeek.toISOString().split("T")[0]
   const endStr = endOfWeek.toISOString().split("T")[0]
 
-  const { data: tasks } = await supabase
+  let query = supabase
     .from("tasks")
     .select("status, prazo")
     .gte("prazo", `${startStr}T00:00:00`)
     .lte("prazo", `${endStr}T23:59:59`)
+
+  if (lojaId) query = query.eq("loja_id", lojaId)
+
+  const { data: tasks } = await query
 
   const dayMap = new Map<number, { total: number; concluidas: number }>()
 
@@ -143,7 +160,7 @@ export async function getWeeklyPerformance(): Promise<
   })
 }
 
-/** Performance por funcionário (todas as tarefas). */
+/** Performance por funcionario (tarefas da loja). */
 export async function getEmployeePerformance(): Promise<
   {
     matricula: string
@@ -156,12 +173,17 @@ export async function getEmployeePerformance(): Promise<
   }[]
 > {
   const supabase = await createClient()
+  const lojaId = await getCurrentLojaId()
 
-  const { data: tasks } = await supabase
+  let query = supabase
     .from("tasks")
     .select(
       "status, atribuido_para, atribuido_profile:profiles!tasks_atribuido_para_fkey(matricula, nome, setor_base)"
     )
+
+  if (lojaId) query = query.eq("loja_id", lojaId)
+
+  const { data: tasks } = await query
 
   if (!tasks || tasks.length === 0) return []
 

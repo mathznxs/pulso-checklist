@@ -2,14 +2,14 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 import { Navbar } from "@/components/pulso/navbar"
-import { getCurrentUser } from "@/lib/actions/auth"
+import { getProfileForSession } from "@/lib/actions/auth"
 import { getAllProfiles, getShifts, getFixedSchedules, getDistinctSectors } from "@/lib/actions/admin"
 import { AdminContent } from "@/components/pulso/admin-content"
 import { redirect } from "next/navigation"
 
 export default async function AdminPage() {
-  const [{ profile }, profiles, shifts, schedules, sectors] = await Promise.all([
-    getCurrentUser(),
+  const [profile, profiles, shifts, schedules, sectors] = await Promise.all([
+    getProfileForSession(),
     getAllProfiles(),
     getShifts(),
     getFixedSchedules(),
@@ -18,11 +18,7 @@ export default async function AdminPage() {
 
   if (!profile) redirect("/auth/login")
 
-  const isLideranca =
-    profile.cargo === "supervisão" ||
-    profile.cargo === "gerente"
-
-  if (!isLideranca) redirect("/")
+  if (profile.cargo !== "gerente") redirect("/")
 
   return (
     <div className="min-h-screen bg-background">

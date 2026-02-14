@@ -1,16 +1,23 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { getCurrentLojaId } from "@/lib/actions/auth"
 import { revalidatePath } from "next/cache"
 import type { Challenge, ChallengeScore } from "@/lib/types"
 
 export async function getActiveChallenges(): Promise<Challenge[]> {
   const supabase = await createClient()
-  const { data } = await supabase
+  const lojaId = await getCurrentLojaId()
+
+  let query = supabase
     .from("challenges")
     .select("*")
     .eq("ativa", true)
     .order("criado_em", { ascending: false })
+
+  if (lojaId) query = query.eq("loja_id", lojaId)
+
+  const { data } = await query
 
   return (data as Challenge[]) ?? []
 }
@@ -32,6 +39,7 @@ export async function createChallenge(
   formData: FormData
 ): Promise<{ error?: string }> {
   const supabase = await createClient()
+  const lojaId = await getCurrentLojaId()
   const dataInicio = (formData.get("data_inicio") as string) || null
   const dataFim = (formData.get("data_fim") as string) || null
   const descricao = (formData.get("descricao") as string) || null
@@ -40,6 +48,7 @@ export async function createChallenge(
     data_inicio: dataInicio,
     data_fim: dataFim,
     descricao: descricao,
+    loja_id: lojaId,
   })
   if (error) return { error: error.message }
   revalidatePath("/gincanas")
@@ -57,7 +66,6 @@ export async function updateChallenge(
   return {}
 }
 
-/** Incrementa +1 ponto (acumula, não sobrescreve). */
 export async function incrementScore(
   challengeId: string,
   profileId: string
@@ -84,7 +92,6 @@ export async function incrementScore(
   return {}
 }
 
-/** Decrementa 1 ponto (mínimo 0). */
 export async function decrementScore(
   challengeId: string,
   profileId: string
@@ -112,7 +119,6 @@ export async function decrementScore(
   return {}
 }
 
-/** Define valor manual de pontos. */
 export async function setScore(
   challengeId: string,
   profileId: string,
@@ -134,7 +140,6 @@ export async function setScore(
   return {}
 }
 
-/** @deprecated Use incrementScore/setScore. Mantido para compatibilidade. */
 export async function updateScore(
   challengeId: string,
   userId: string,
