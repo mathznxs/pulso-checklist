@@ -34,6 +34,15 @@ export async function getCurrentUser(): Promise<{
   }
 }
 
+/**
+ * Simplified helper: returns Profile | null directly.
+ * Used by RSC pages that just need the profile object.
+ */
+export async function getProfileForSession(): Promise<Profile | null> {
+  const { profile } = await getCurrentUser()
+  return profile
+}
+
 /** Returns the loja_id from the current session for use in query filters. */
 export async function getCurrentLojaId(): Promise<string | null> {
   const session = await auth()

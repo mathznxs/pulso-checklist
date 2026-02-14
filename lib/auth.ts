@@ -16,9 +16,7 @@ declare module "next-auth" {
       ativo: boolean
     }
   }
-}
 
-declare module "next-auth" {
   interface JWT {
     microsoftId?: string
     profileId?: string | null

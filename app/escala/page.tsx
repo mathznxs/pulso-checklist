@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { Navbar } from "@/components/pulso/navbar"
-import { getCurrentUser } from "@/lib/actions/auth"
+import { getProfileForSession } from "@/lib/actions/auth"
 import { getUserTodaySchedule, getUserWeekSchedule, getTodayAllSchedules } from "@/lib/actions/schedule"
 import { getShifts } from "@/lib/actions/admin"
 import { getAllProfiles } from "@/lib/actions/admin"
@@ -9,7 +9,7 @@ import { EscalaContent } from "@/components/pulso/escala-content"
 import { redirect } from "next/navigation"
 
 export default async function EscalaPage() {
-  const { profile } = await getCurrentUser()
+  const profile = await getProfileForSession()
   if (!profile) redirect("/auth/login")
 
   const isLideranca = profile.cargo === "gerente"

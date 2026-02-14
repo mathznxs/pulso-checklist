@@ -1,13 +1,13 @@
 export const dynamic = 'force-dynamic'
 
 import { Navbar } from "@/components/pulso/navbar"
-import { getCurrentUser } from "@/lib/actions/auth"
+import { getProfileForSession } from "@/lib/actions/auth"
 import { getCalendarEvents } from "@/lib/actions/calendar"
 import { CalendarioContent } from "@/components/pulso/calendario-content"
 import { redirect } from "next/navigation"
 
 export default async function CalendarioPage() {
-  const { profile } = await getCurrentUser()
+  const profile = await getProfileForSession()
   if (!profile) redirect("/auth/login")
 
   const now = new Date()

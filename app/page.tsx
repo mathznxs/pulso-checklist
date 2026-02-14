@@ -6,7 +6,7 @@ import { OperationalDay } from "@/components/pulso/operational-day"
 import { SectorExecution } from "@/components/pulso/sector-execution"
 import { PerformanceTable } from "@/components/pulso/performance-table"
 import { PerformanceChart } from "@/components/pulso/performance-chart"
-import { getCurrentUser } from "@/lib/actions/auth"
+import { getProfileForSession } from "@/lib/actions/auth"
 import { redirect } from "next/navigation"
 import {
   getDashboardStats,
@@ -47,7 +47,7 @@ function formatDate(): string {
 }
 
 export default async function DashboardPage() {
-  const { profile } = await getCurrentUser()
+  const profile = await getProfileForSession()
   if (!profile) redirect("/auth/login")
 
   const [

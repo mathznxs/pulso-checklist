@@ -43,7 +43,6 @@ import {
 
 const cargoConfig: Record<string, { label: string; bgClass: string }> = {
   assistente: { label: "Assistente", bgClass: "bg-blue-50 text-blue-700" },
-  supervisão: { label: "Supervisão", bgClass: "bg-amber-50 text-amber-700" },
   gerente: { label: "Gerente", bgClass: "bg-emerald-50 text-emerald-700" },
 };
 
@@ -125,7 +124,6 @@ export function AdminContent({
         body: JSON.stringify({
           matricula: formData.get("matricula"),
           nome: formData.get("nome"),
-          cpf: formData.get("cpf"),
           cargo: formData.get("cargo"),
           setor_base: formData.get("setor_base") || null,
         }),
@@ -302,16 +300,6 @@ export function AdminContent({
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="cu-cpf">CPF</Label>
-                    <Input
-                      id="cu-cpf"
-                      name="cpf"
-                      required
-                      placeholder="000.000.000-00"
-                      maxLength={14}
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
                     <Label htmlFor="cu-cargo">Cargo</Label>
                     <select
                       id="cu-cargo"
@@ -320,7 +308,6 @@ export function AdminContent({
                       className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
                     >
                       <option value="assistente">Assistente</option>
-                      <option value="supervisão">Supervisor</option>
                       <option value="gerente">Gerente</option>
                     </select>
                   </div>
@@ -577,7 +564,6 @@ export function AdminContent({
                       className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
                     >
                       <option value="assistente">Assistente</option>
-                      <option value="supervisão">Supervisão</option>
                       <option value="gerente">Gerente</option>
                     </select>
                   </div>

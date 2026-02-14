@@ -1,14 +1,14 @@
 export const dynamic = 'force-dynamic'
 
 import { Navbar } from "@/components/pulso/navbar"
-import { getCurrentUser } from "@/lib/actions/auth"
+import { getProfileForSession } from "@/lib/actions/auth"
 import { getTasksForRole } from "@/lib/actions/tasks"
 import { getAllProfiles } from "@/lib/actions/admin"
 import { ExecucaoContent } from "@/components/pulso/execucao-content"
 import { redirect } from "next/navigation"
 
 export default async function ExecucaoPage() {
-  const { profile } = await getCurrentUser()
+  const profile = await getProfileForSession()
   if (!profile) redirect("/auth/login")
 
   const isLideranca = profile.cargo === "gerente"
