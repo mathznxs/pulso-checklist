@@ -97,6 +97,48 @@ export async function createFixedSchedule(
   return {}
 }
 
+export async function updateFixedSchedule(
+  scheduleId: string,
+  formData: FormData
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const lojaId = await getCurrentLojaId()
+  const diasStr = formData.get("dias_semana") as string
+  const dias = diasStr ? diasStr.split(",").map(Number) : []
+
+  let query = supabase
+    .from("fixed_schedule")
+    .update({
+      user_id: formData.get("user_id") as string,
+      setor: formData.get("setor") as string,
+      turno_id: formData.get("turno_id") as string,
+      dias_semana: dias,
+    })
+    .eq("id", scheduleId)
+
+  if (lojaId) query = query.eq("loja_id", lojaId)
+
+  const { error } = await query
+  if (error) return { error: error.message }
+  revalidatePath("/admin")
+  return {}
+}
+
+export async function deleteFixedSchedule(
+  scheduleId: string
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const lojaId = await getCurrentLojaId()
+
+  let query = supabase.from("fixed_schedule").delete().eq("id", scheduleId)
+  if (lojaId) query = query.eq("loja_id", lojaId)
+
+  const { error } = await query
+  if (error) return { error: error.message }
+  revalidatePath("/admin")
+  return {}
+}
+
 export async function updateAnnouncement(
   message: string
 ): Promise<{ error?: string }> {

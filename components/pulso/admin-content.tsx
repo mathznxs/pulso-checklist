@@ -6,6 +6,8 @@ import type { Profile, Shift, FixedSchedule } from "@/lib/types";
 import {
   createShift,
   createFixedSchedule,
+  updateFixedSchedule,
+  deleteFixedSchedule,
   updateAnnouncement,
 } from "@/lib/actions/admin";
 import { Button } from "@/components/ui/button";
@@ -39,6 +41,7 @@ import {
   Megaphone,
   Clock,
   Plus,
+  Trash2,
 } from "lucide-react";
 
 const cargoConfig: Record<string, { label: string; bgClass: string }> = {
@@ -92,6 +95,8 @@ export function AdminContent({
   const [showEditUser, setShowEditUser] = useState<Profile | null>(null);
   const [showCreateShift, setShowCreateShift] = useState(false);
   const [showCreateSchedule, setShowCreateSchedule] = useState(false);
+  const [showEditSchedule, setShowEditSchedule] = useState<FixedSchedule | null>(null);
+  const [scheduleToDelete, setScheduleToDelete] = useState<FixedSchedule | null>(null);
   const [showAnnouncement, setShowAnnouncement] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
@@ -198,7 +203,6 @@ export function AdminContent({
     e.preventDefault();
     const form = e.currentTarget;
     const fd = new FormData(form);
-    // Collect checked days
     const dias = DIAS_SEMANA.filter(
       (d) => fd.get(`dia_${d.value}`) === "on",
     ).map((d) => d.value);
@@ -207,6 +211,34 @@ export function AdminContent({
     startTransition(async () => {
       await createFixedSchedule(fd);
       setShowCreateSchedule(false);
+      router.refresh();
+    });
+  }
+
+  // --- Edit Fixed Schedule ---
+  async function handleEditSchedule(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!showEditSchedule) return;
+    const form = e.currentTarget;
+    const fd = new FormData(form);
+    const dias = DIAS_SEMANA.filter(
+      (d) => fd.get(`dia_edit_${d.value}`) === "on",
+    ).map((d) => d.value);
+    fd.set("dias_semana", dias.join(","));
+
+    startTransition(async () => {
+      await updateFixedSchedule(showEditSchedule.id, fd);
+      setShowEditSchedule(null);
+      router.refresh();
+    });
+  }
+
+  // --- Delete Fixed Schedule ---
+  async function handleDeleteSchedule() {
+    if (!scheduleToDelete) return;
+    startTransition(async () => {
+      await deleteFixedSchedule(scheduleToDelete.id);
+      setScheduleToDelete(null);
       router.refresh();
     });
   }
@@ -720,9 +752,29 @@ export function AdminContent({
                     <p className="text-sm font-medium text-foreground">
                       {s.profile?.nome ?? "N/A"}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      {s.shift?.nome ?? "N/A"}
-                    </p>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowEditSchedule(s)}
+                        className="h-8 gap-1"
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                        Editar
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setScheduleToDelete(s)}
+                        disabled={isPending}
+                        className="h-8 gap-1 text-red-600 hover:bg-red-50 hover:text-red-700"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Excluir
+                      </Button>
+                    </div>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {s.setor}
@@ -759,13 +811,16 @@ export function AdminContent({
                   <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Dias
                   </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Ações
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-card">
                 {schedules.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={4}
+                      colSpan={5}
                       className="px-4 py-8 text-center text-muted-foreground"
                     >
                       Nenhuma escala fixa cadastrada
@@ -797,12 +852,177 @@ export function AdminContent({
                           ))}
                         </div>
                       </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowEditSchedule(s)}
+                            className="h-8 gap-1.5"
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                            Editar
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setScheduleToDelete(s)}
+                            disabled={isPending}
+                            className="h-8 gap-1.5 text-red-600 hover:bg-red-50 hover:text-red-700"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Excluir
+                          </Button>
+                        </div>
+                      </td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
           </div>
+
+          {/* Edit Schedule Dialog */}
+          <Dialog
+            open={showEditSchedule !== null}
+            onOpenChange={(open) => !open && setShowEditSchedule(null)}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Editar Escala Fixa</DialogTitle>
+              </DialogHeader>
+              {showEditSchedule && (
+                <form
+                  onSubmit={handleEditSchedule}
+                  className="flex flex-col gap-4"
+                >
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="es-user">Funcionário</Label>
+                    <select
+                      id="es-user"
+                      name="user_id"
+                      required
+                      defaultValue={showEditSchedule.user_id}
+                      className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
+                    >
+                      <option value="">Selecione</option>
+                      {profiles
+                        .filter((p) => p.ativo)
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.nome} ({p.matricula})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="es-setor">Setor</Label>
+                    <select
+                      id="es-setor"
+                      name="setor"
+                      required
+                      defaultValue={showEditSchedule.setor}
+                      className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
+                    >
+                      <option value="">Selecione</option>
+                      {SETORES.map((sec) => (
+                        <option key={sec} value={sec}>
+                          {sec}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="es-turno">Turno</Label>
+                    <select
+                      id="es-turno"
+                      name="turno_id"
+                      required
+                      defaultValue={showEditSchedule.turno_id}
+                      className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground ring-offset-background"
+                    >
+                      <option value="">Selecione</option>
+                      {shifts.map((sh) => (
+                        <option key={sh.id} value={sh.id}>
+                          {sh.nome} ({sh.hora_inicio} - {sh.hora_fim})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label>Dias da Semana</Label>
+                    <div className="flex flex-wrap gap-3">
+                      {DIAS_SEMANA.map((d) => (
+                        <label
+                          key={d.value}
+                          className="flex items-center gap-1.5 text-sm"
+                        >
+                          <input
+                            type="checkbox"
+                            name={`dia_edit_${d.value}`}
+                            defaultChecked={showEditSchedule.dias_semana?.includes(d.value)}
+                            className="h-4 w-4 rounded border-input"
+                          />
+                          {d.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <Button type="submit" disabled={isPending}>
+                    {isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Salvar Alterações
+                  </Button>
+                </form>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* Delete Schedule Confirmation */}
+          <Dialog
+            open={scheduleToDelete !== null}
+            onOpenChange={(open) => !open && setScheduleToDelete(null)}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Excluir escala</DialogTitle>
+              </DialogHeader>
+              {scheduleToDelete && (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Tem certeza que deseja excluir a escala fixa de{" "}
+                    <strong>{scheduleToDelete.profile?.nome ?? "N/A"}</strong>{" "}
+                    ({scheduleToDelete.setor}, {scheduleToDelete.shift?.nome})?
+                    Esta ação não pode ser desfeita.
+                  </p>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setScheduleToDelete(null)}
+                      disabled={isPending}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={handleDeleteSchedule}
+                      disabled={isPending}
+                    >
+                      {isPending && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      Excluir
+                    </Button>
+                  </div>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
         </div>
       )}
 
